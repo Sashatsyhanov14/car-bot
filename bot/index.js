@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 const { supabase, getUser, createUser, getExcursions, saveMessage, getHistory, createRequest, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText, getManagerReport } = require('./src/openai');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
