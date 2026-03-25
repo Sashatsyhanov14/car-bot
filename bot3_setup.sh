@@ -1,24 +1,44 @@
 #!/bin/bash
 
-# --- ИНТЕРАКТИВНЫЙ СКРИПТ НАСТРОЙКИ BOT3 ---
-# Этот скрипт НЕ содержит ключей, поэтому его БЕЗОПАСНО хранить в Git.
-# Вы просто вставляете ключи по просьбе скрипта.
+# --- УЛУЧШЕННЫЙ ИНТЕРАКТИВНЫЙ СКРИПТ НАСТРОЙКИ BOT3 ---
+# Разделено на отдельные шаги для плохих терминалов.
 
 echo "---------------------------------------------------"
-echo "🤖 ИНТЕРАКТИВНАЯ НАСТРОЙКА BOT3 (Car & Transfer)..."
+echo "🤖 ИНТЕРАКТИВНАЯ НАСТРОЙКА BOT3 (Car & Transfer)"
 echo "---------------------------------------------------"
 
-# 1. Запрос данных
-echo "🔔 Пожалуйста, вставляйте значения и нажимайте Enter:"
-read -p "1. BOT_TOKEN (от @BotFather): " BOT_TOKEN
-read -p "2. SUPABASE_URL: " SUPABASE_URL
-read -p "3. SUPABASE_SERVICE_ROLE_KEY: " SUPABASE_SERVICE_ROLE_KEY
-read -p "4. SUPABASE_ANON_KEY (для WebApp): " SUPABASE_ANON_KEY
-read -p "5. OPENROUTER_API_KEY (или OpenAI): " OPENROUTER_API_KEY
-read -p "6. WEBAPP_URL (например, https://car.ticaretai.tr): " WEBAPP_URL
+echo "Шаг 1: Введите BOT_TOKEN (из BotFather)"
+read BOT_TOKEN
+echo "✅ Принято."
+echo ""
+
+echo "Шаг 2: Введите SUPABASE_URL"
+read SUPABASE_URL
+echo "✅ Принято."
+echo ""
+
+echo "Шаг 3: Введите SUPABASE_SERVICE_ROLE_KEY"
+read SUPABASE_SERVICE_ROLE_KEY
+echo "✅ Принято."
+echo ""
+
+echo "Шаг 4: Введите SUPABASE_ANON_KEY"
+read SUPABASE_ANON_KEY
+echo "✅ Принято."
+echo ""
+
+echo "Шаг 5: Введите OPENROUTER_API_KEY"
+read OPENROUTER_API_KEY
+echo "✅ Принято."
+echo ""
+
+echo "Шаг 6: Введите WEBAPP_URL (например, https://car.ticaretai.tr)"
+read WEBAPP_URL
+echo "✅ Принято."
+echo ""
 
 echo "---------------------------------------------------"
-echo "📝 Запись .env файлов..."
+echo "📝 Записываю файлы .env..."
 
 mkdir -p bot webapp
 
@@ -39,7 +59,7 @@ VITE_SUPABASE_URL=$SUPABASE_URL
 VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 EOF
 
-echo "✅ Файлы .env созданы."
+echo "✅ Файлы .env созданы!"
 
 # 2. Сборка фронтенда
 echo "📦 Сборка WebApp (Vite)..."
@@ -55,12 +75,12 @@ npm install
 cd ..
 
 # 4. Запуск в PM2
-echo "⚙️ Запуск процесса в PM2..."
+echo "⚙️ Запуск в PM2..."
 pm2 delete bot3 2>/dev/null
 pm2 start bot/index.js --name "bot3" --env PORT=3003
 pm2 save
 
 echo "---------------------------------------------------"
-echo "✅ ГОТОВО! Бот3 настроен и запущен на порту 3003."
-echo "Проверьте статус командой: pm2 status"
+echo "✅ ГОТОВО! Бот3 настроен и запущен."
+echo "Проверьте статус: pm2 status"
 echo "---------------------------------------------------"
