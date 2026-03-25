@@ -36,7 +36,7 @@ echo "✅ Файлы .env созданы."
 # 3. Сборка фронтенда
 echo "📦 Сборка WebApp (Vite)..."
 cd webapp
-npm install --include=dev
+npm install --include=dev --legacy-peer-deps
 npm run build
 cd ..
 
