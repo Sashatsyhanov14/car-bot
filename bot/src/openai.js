@@ -76,7 +76,8 @@ module.exports = {
             // Прикрепляем теги для парсера в index.js
             let embeddedTags = `[LANG:${analysis.lang_code}]`;
             if (analysis.intent === 'sale' && analysis.item_id) {
-                embeddedTags += `\n[BOOK_REQUEST:${analysis.service_type}:${analysis.item_id}]`;
+                const infoStr = Buffer.from(JSON.stringify(analysis.collected_info || {})).toString('base64');
+                embeddedTags += `\n[BOOK_REQUEST:${analysis.service_type}:${analysis.item_id}:${infoStr}]`;
             }
 
             return finalMessage + '\n' + embeddedTags;

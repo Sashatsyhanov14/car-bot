@@ -149,16 +149,30 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      if (tg?.initDataUnsafe?.user) {
-        const tgUser = tg.initDataUnsafe.user;
+      // 1. Ждем инициализации Telegram SDK (до 5 попыток)
+      let tgUser: any = null;
+      for (let i = 0; i < 5; i++) {
+        tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser?.id) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (tgUser?.id) {
         const userLang = tgUser.language_code === 'tr' ? 'tr' : (tgUser.language_code === 'ru' ? 'ru' : 'en');
         setLang(userLang);
-        tg.ready();
-        tg.expand();
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
         // Автоматически входим по ID из Telegram
         await fetchUserData(tgUser.id, tgUser.first_name, tgUser.username);
       } else {
-        setLoading(false);
+        // Попытка получить uid из URL параметров
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('uid');
+        if (uid && !isNaN(parseInt(uid))) {
+          await fetchUserData(parseInt(uid));
+        } else {
+          setLoading(false);
+        }
       }
     };
     init();
@@ -169,16 +183,17 @@ const App: React.FC = () => {
   const fetchUserData = async (tgId: number, firstName?: string, username?: string) => {
     try {
       setLoading(true);
-      const { data: userData, error } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
+      const { data: userData, error: fetchErr } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
 
       let currentUser = userData;
 
-      if (!userData && error && tg?.initDataUnsafe?.user) {
-        // Если пользователя нет, но мы в Telegram — создаем его
+      // САМОРЕГ: Если пользователя нет в БД, но мы в Telegram — создаем его
+      if (!userData && (fetchErr?.code === 'PGRST116' || !fetchErr) && window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
         const newUser = {
           telegram_id: tgId,
-          first_name: firstName || 'User',
-          username: username || '',
+          first_name: firstName || tgUser.first_name || 'User',
+          username: username || tgUser.username || '',
           balance: 0,
           role: 'client'
         };
