@@ -291,8 +291,8 @@ bot.on('text', async (ctx) => {
 });
 
 
-// Запуск
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+// Запуск (всегда Long Polling на VPS)
+if (!process.env.VERCEL) {
     bot.launch().then(() => console.log('Car & Transfer Bot is running...'));
 }
 
