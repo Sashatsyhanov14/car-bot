@@ -9,20 +9,20 @@ const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
     defaultHeaders: {
-        'HTTP-Referer': 'https://excursion-bot.com',
-        'X-Title': 'Excursion Bot',
+        'HTTP-Referer': 'https://car.ticaretai.tr',
+        'X-Title': 'Car & Transfer Bot',
     }
 });
 
 module.exports = {
-    async getChatResponse(excursions, faqText, history, userMessage) {
+    async getChatResponse(faqText, history, userMessage) {
         try {
             const { data: cars } = await require('./supabase').getCars();
             const { data: transfers } = await require('./supabase').getTransfers();
 
             // === АГЕНТ 1: АНАЛИТИК (Analyzer) ===
             const analyzerMessages = [
-                { role: 'system', content: ANALYZER_PROMPT(cars || [], transfers || [], excursions || []) },
+                { role: 'system', content: ANALYZER_PROMPT(cars || [], transfers || []) },
                 ...history,
                 { role: 'user', content: userMessage }
             ];
@@ -44,7 +44,7 @@ module.exports = {
 
             // === АГЕНТ 2: ПИСАТЕЛЬ (Writer) — Всегда на RU ===
             const writerMessages = [
-                { role: 'system', content: WRITER_PROMPT(cars || [], transfers || [], excursions || [], faqText) },
+                { role: 'system', content: WRITER_PROMPT(cars || [], transfers || [], faqText) },
                 {
                     role: 'user',
                     content: `Инструкции от Аналитика:\nНамерение: ${analysis.intent}\nИнструкция: ${analysis.writer_instruction}`

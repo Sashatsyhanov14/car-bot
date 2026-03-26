@@ -38,7 +38,7 @@ bot.action(/^accept_req_(.+)$/, async (ctx) => {
 
         // Уведомление клиенту
         const lang = userLangCache[request.user_id] || 'ru';
-        const msgRu = `✅ Ваша заявка на экскурсию «${request.excursion_title}» принята в работу! Оператор свяжется с вами в ближайшее время.`;
+        const msgRu = `✅ Ваша заявка «${request.excursion_title}» принята в работу! Оператор свяжется с вами в ближайшее время.`;
         const msg = await getLocalizedText(lang, msgRu);
         await bot.telegram.sendMessage(request.user_id, msg);
 
@@ -93,7 +93,7 @@ bot.start(async (ctx) => {
     const lang = ctx.from.language_code || 'ru';
     userLangCache[telegramId] = lang;
 
-    const welcomeRu = `Привет, ${username}! 🌍\n\nЯ твой персональный гид. Помогу выбрать лучшую экскурсию и отвечу на любые вопросы.\n\nВ какую сторону смотрим? Напиши город или просто спроси, что у нас есть. 🗺️`;
+    const welcomeRu = `Привет, ${username}! 🚗\n\nЯ твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер.\n\nВ какую сторону смотрим? Напиши город или просто спроси, что у нас есть. 🗺️`;
     const welcomeText = await getLocalizedText(lang, welcomeRu);
 
     const webappBtnRu = '🎒 Открыть Каталог';
@@ -193,14 +193,11 @@ bot.on('text', async (ctx) => {
             } else if (serviceType === 'transfer') {
                 const { data: transfers } = await supabase.from('transfers').select('*');
                 selectedItem = transfers.find(t => t.id === itemId);
-            } else {
-                const { data: excursions } = await getExcursions();
-                selectedItem = excursions.find(e => e.id === itemId);
             }
 
             const { data: order } = await createRequest(
                 telegramId,
-                serviceType === 'excursion' ? itemId : null,
+                null, // excursion_id 
                 selectedItem ? (selectedItem.title || selectedItem.car_info) : 'Услуга',
                 state.data.fullName,
                 state.data.tourDate,
@@ -250,19 +247,18 @@ bot.on('text', async (ctx) => {
     } else {
         // --- AI ЧАТ ---
         const { data: history } = await getHistory(telegramId);
-        const { data: excursions } = await getExcursions();
         const { data: faqRows } = await getFaq();
         const faqText = faqRows ? faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') : '';
 
         await saveMessage(telegramId, 'user', userText);
         try { await ctx.sendChatAction('typing'); } catch (e) { }
 
-        const aiResponse = await getChatResponse(excursions, faqText, history, userText);
+        const aiResponse = await getChatResponse(faqText, history, userText);
 
         const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);
         if (langMatch) userLangCache[telegramId] = langMatch[1].toLowerCase();
 
-        const bookMatch = aiResponse.match(/\[BOOK_REQUEST:(car|transfer|excursion):([a-zA-Z0-9_-]+)\]/i);
+        const bookMatch = aiResponse.match(/\[BOOK_REQUEST:(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         let finalResponse = aiResponse.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
 
         if (bookMatch) {
@@ -287,7 +283,7 @@ bot.on('text', async (ctx) => {
 
 // Запуск
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    bot.launch().then(() => console.log('Excursion Bot with AI Multi-Agents is running...'));
+    bot.launch().then(() => console.log('Car & Transfer Bot is running...'));
 }
 
 module.exports = bot;

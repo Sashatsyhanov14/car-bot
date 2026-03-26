@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import AdminStats from './components/AdminStats';
-import AdminExcursions from './components/AdminExcursions';
 import AdminCars from './components/AdminCars';
 import AdminTransfers from './components/AdminTransfers';
 import AdminFaq from './components/AdminFaq';
@@ -142,7 +141,7 @@ const App: React.FC = () => {
   const [loginInputId, setLoginInputId] = useState('');
   const [lang, setLang] = useState<'ru' | 'en' | 'tr'>('ru');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'excursions' | 'cars' | 'transfers' | 'requests' | 'faq'>('referral');
+  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'cars' | 'transfers' | 'requests' | 'faq'>('referral');
   const [referralStats, setReferralStats] = useState({ invited: 0, requests: 0 });
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
 
@@ -287,7 +286,6 @@ const App: React.FC = () => {
           </div>
         );
       case 'stats': return <AdminStats t={t} />;
-      case 'excursions': return <AdminExcursions t={t} />;
       case 'cars': return <AdminCars t={t} />;
       case 'transfers': return <AdminTransfers t={t} />;
       case 'requests': return <AdminRequests t={t} />;
@@ -322,10 +320,6 @@ const App: React.FC = () => {
             <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center p-4 rounded-3xl transition-all ${activeTab === 'stats' ? 'text-primary' : 'text-slate-500'}`}>
               <span className="material-symbols-outlined mb-1">dashboard</span>
               <span className="text-[9px] font-bold uppercase tracking-wider">{t.tabStats}</span>
-            </button>
-            <button onClick={() => setActiveTab('excursions')} title={t.tabExcursions} className={`flex flex-col items-center p-2 rounded-3xl transition-all ${activeTab === 'excursions' ? 'text-primary' : 'text-slate-500'}`}>
-              <span className="material-symbols-outlined text-[20px] mb-1">map</span>
-              <span className="text-[8px] font-bold uppercase tracking-wider">{t.tabExcursions}</span>
             </button>
             <button onClick={() => setActiveTab('cars')} title={t.tabCars} className={`flex flex-col items-center p-2 rounded-3xl transition-all ${activeTab === 'cars' ? 'text-primary' : 'text-slate-500'}`}>
               <span className="material-symbols-outlined text-[20px] mb-1">directions_car</span>

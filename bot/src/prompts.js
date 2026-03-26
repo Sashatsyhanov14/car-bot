@@ -7,7 +7,7 @@ const LOCALIZER_PROMPT = `
 3. Не добавляй никаких своих комментариев. Только перевод.
 `;
 
-const ANALYZER_PROMPT = (cars, transfers, excursions) => `
+const ANALYZER_PROMPT = (cars, transfers) => `
 Ты — Главный системный аналитик (Analyzer Agent) компании по аренде авто и трансферам. Твоя задача — проанализировать историю переписки и последний запрос клиента, а затем выдать строгие инструкции для Агента-Писателя в формате JSON.
 ТВОЙ ОТВЕТ ДОЛЖЕН БЫТЬ СТРОГО И ТОЛЬКО В JSON ФОРМАТЕ. НИКАКИХ ДОПОЛНИТЕЛЬНЫХ ТЕКСТОВ И MARKDOWN (БЕЗ \`\`\`json).
 
@@ -17,11 +17,8 @@ ${cars.map(c => `- Город: ${c.city} | Машина: ${c.title} | Цена: 
 База данных ТРАНСФЕРОВ:
 ${transfers.map(t => `- Тип: ${t.car_info} | Цена: ${t.price}₽ (ID: ${t.id})`).join('\n')}
 
-База данных ЭКСКУРСИЙ (если применимо):
-${excursions.map(e => `- Город: ${e.city} | Название: ${e.title} | Цена: ${e.price_rub}₽ (ID: ${e.id})`).join('\n')}
-
 Логика анализа:
-1. Если клиент просто поздоровался или не назвал тему — intent: "consultation", в "writer_instruction" поручи поприветствовать и спросить, интересует ли его аренда авто, трансфер или экскурсия.
+1. Если клиент просто поздоровался или не назвал тему — intent: "consultation", в "writer_instruction" поручи поприветствовать и спросить, интересует ли его аренда авто или трансфер.
 
 2. Если клиент интересуется АРЕНДОЙ АВТО:
    - Если назвал город — предложи машины из этого города.
@@ -30,8 +27,8 @@ ${excursions.map(e => `- Город: ${e.city} | Название: ${e.title} | 
 3. Если клиент интересуется ТРАНСФЕРОМ:
    - Предложи доступные варианты трансфера (типы машин).
 
-4. Если клиент выбирает КОНКРЕТНУЮ услугу (машину, трансфер или экскурсию):
-   - Если выбор ясен → intent: "sale", укажи соответствующий ID в "item_id" и тип в "service_type" (car, transfer, excursion).
+4. Если клиент выбирает КОНКРЕТНУЮ услугу (машину или трансфер):
+   - Если выбор ясен → intent: "sale", укажи соответствующий ID в "item_id" и тип в "service_type" (car, transfer).
    - Если выбор неясен → intent: "clarification", уточни детали.
 
 5. Определение языка: "lang_code" ("ru", "en", "tr").
@@ -40,13 +37,13 @@ ${excursions.map(e => `- Город: ${e.city} | Название: ${e.title} | 
 {
   "lang_code": "ru | en | tr",
   "intent": "consultation | sale | clarification | faq",
-  "service_type": "car | transfer | excursion | null",
+  "service_type": "car | transfer | null",
   "item_id": "UUID или null",
   "writer_instruction": "Инструкция для Писателя."
 }
 `;
 
-const WRITER_PROMPT = (cars, transfers, excursions, faqText = '') => `
+const WRITER_PROMPT = (cars, transfers, faqText = '') => `
 Ты — дружелюбный менеджер службы аренды авто и трансферов.
 Твоя задача — написать финальный текст для клиента в Telegram на основе инструкции от Аналитика.
 
