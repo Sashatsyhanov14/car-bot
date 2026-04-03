@@ -1,18 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-const AdminCars: React.FC<{ t?: any }> = () => {
+const EMPTY_CAR = {
+    brand: '', model: '', city: '', price_per_day: 0,
+    body_style: '', transmission: 'Automatic', fuel_type: 'Petrol',
+    description: '', image_url: '', image_urls: [] as string[],
+    sort_number: 1, is_active: true
+};
+
+const ConfirmDialog: React.FC<{
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+}> = ({ message, onConfirm, onCancel }) => (
+    <div className="fixed inset-0 z-50 flex items-end justify-center pb-28 px-4 bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+        <div className="w-full max-w-sm bg-[#1a1a1d] rounded-3xl border border-white/10 p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <p className="text-sm text-slate-200 text-center font-semibold">{message}</p>
+            <div className="flex gap-2">
+                <button onClick={onCancel} className="flex-1 py-3 bg-white/5 rounded-2xl text-sm font-bold text-slate-300">Cancel</button>
+                <button onClick={onConfirm} className="flex-1 py-3 bg-red-500/20 rounded-2xl text-sm font-black text-red-400">Delete</button>
+            </div>
+        </div>
+    </div>
+);
+
+export default function AdminCars() {
     const [cars, setCars] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+    const [formData, setFormData] = useState<any>({ ...EMPTY_CAR });
+    const [confirmTarget, setConfirmTarget] = useState<any>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [formData, setFormData] = useState({
-        city: '', title: '', description: '', price_per_day: 0, conditions: '', image_url: '', sort_number: 1, is_active: true
-    });
-
-    useEffect(() => {
-        fetchCars();
-    }, []);
+    useEffect(() => { fetchCars(); }, []);
 
     const fetchCars = async () => {
         setLoading(true);
@@ -21,102 +42,91 @@ const AdminCars: React.FC<{ t?: any }> = () => {
         setLoading(false);
     };
 
-    const handleSave = async () => {
-        if (isEditing) {
-            await supabase.from('cars').update(formData).eq('id', isEditing.id);
-        } else {
-            await supabase.from('cars').insert([formData]);
+    const handleFilesSelect = async (files: FileList) => {
+        setUploading(true);
+        const newUrls: string[] = [];
+        try {
+            for (const file of Array.from(files)) {
+                const ext = file.name.split('.').pop();
+                const fileName = `car_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                const { error } = await supabase.storage.from('excursion_photos').upload(fileName, file);
+                if (error) throw error;
+                const { data: urlData } = supabase.storage.from('excursion_photos').getPublicUrl(fileName);
+                newUrls.push(urlData.publicUrl);
+            }
+            setFormData((prev: any) => ({
+                ...prev,
+                image_urls: [...(prev.image_urls || []), ...newUrls],
+                image_url: prev.image_url || newUrls[0] || ''
+            }));
+        } catch (e: any) {
+            alert('Error: ' + e.message);
+        } finally {
+            setUploading(false);
         }
+    };
+
+    const handleSave = async () => {
+        const { error } = isEditing 
+            ? await supabase.from('cars').update(formData).eq('id', isEditing.id)
+            : await supabase.from('cars').insert([formData]);
+        
+        if (error) { alert(error.message); return; }
         setIsEditing(null);
-        setFormData({ city: '', title: '', description: '', price_per_day: 0, conditions: '', image_url: '', sort_number: 1, is_active: true });
+        setFormData({ ...EMPTY_CAR });
         fetchCars();
     };
 
-    const startEdit = (car: any) => {
-        setIsEditing(car);
-        setFormData({ ...car });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleDelete = async (id: string) => {
-        if (confirm('Удалить автомобиль?')) {
-            await supabase.from('cars').delete().eq('id', id);
-            fetchCars();
-        }
-    };
-
-    if (loading) return <div className="text-center py-10 opacity-50">Загрузка автомобилей...</div>;
+    if (loading) return <div className="text-center py-10 text-white opacity-50">Loading cars...</div>;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            {/* FORM */}
-            <div className="bg-[#1a1a1d] p-6 rounded-3xl border border-white/5 space-y-4">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">{isEditing ? 'edit' : 'add_circle'}</span>
-                    {isEditing ? 'Редактировать авто' : 'Добавить авто'}
-                </h2>
+        <div className="space-y-6 pb-20">
+            {confirmTarget && <ConfirmDialog message={`Delete ${confirmTarget.brand} ${confirmTarget.model}?`} onConfirm={async () => {
+                await supabase.from('cars').delete().eq('id', confirmTarget.id);
+                setConfirmTarget(null);
+                fetchCars();
+            }} onCancel={() => setConfirmTarget(null)} />}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Город</label>
-                        <input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm" placeholder="Москва" />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Название авто</label>
-                        <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm" placeholder="Toyota Camry" />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Описание</label>
-                        <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm h-24" placeholder="Краткое описание..." />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Цена (₽/сутки)</label>
-                        <input type="number" value={formData.price_per_day} onChange={e => setFormData({ ...formData, price_per_day: parseInt(e.target.value) })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm" />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">Условия аренды</label>
-                        <textarea value={formData.conditions} onChange={e => setFormData({ ...formData, conditions: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm h-20" placeholder="Стаж от 3 лет, залог..." />
-                    </div>
-                    <div className="space-y-1 md:col-span-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-2">URL Фото</label>
-                        <input value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })} className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm" placeholder="https://..." />
-                    </div>
+            {/* Form */}
+            <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 p-5 space-y-6">
+                <h2 className="text-sm font-bold text-slate-200">{isEditing ? 'Edit Car' : 'Add New Car'}</h2>
+                
+                <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="Brand" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                    <input placeholder="Model" value={formData.model} onChange={e => setFormData({...formData, model: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                 </div>
 
-                <div className="flex gap-2 pt-4">
-                    <button onClick={handleSave} className="flex-1 bg-primary text-black font-bold py-3 rounded-2xl active:scale-95 transition-all">
-                        {isEditing ? 'Обновить' : 'Создать'}
-                    </button>
-                    {isEditing && (
-                        <button onClick={() => setIsEditing(null)} className="px-6 bg-white/5 border border-white/10 py-3 rounded-2xl font-bold">Отмена</button>
-                    )}
+                <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                    <input type="number" placeholder="Price / Day" value={formData.price_per_day} onChange={e => setFormData({...formData, price_per_day: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                </div>
+
+                <textarea placeholder="Description" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+
+                <div className="flex gap-3">
+                    {isEditing && <button onClick={() => { setIsEditing(null); setFormData({...EMPTY_CAR}); }} className="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase text-[10px]">Cancel</button>}
+                    <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Save Car</button>
+                    <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center"><span className="material-symbols-outlined">add_a_photo</span></button>
+                    <input ref={fileInputRef} type="file" multiple className="hidden" onChange={e => e.target.files && handleFilesSelect(e.target.files)} />
                 </div>
             </div>
 
-            {/* LIST */}
+            {/* List */}
             <div className="space-y-4">
                 {cars.map(car => (
-                    <div key={car.id} className="bg-[#1a1a1d] p-4 rounded-3xl border border-white/5 flex gap-4 items-center">
-                        <div className="w-16 h-16 bg-black/40 rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {car.image_url ? <img src={car.image_url} alt="" className="object-cover w-full h-full" /> : <span className="material-symbols-outlined text-slate-600">image</span>}
-                        </div>
+                    <div key={car.id} className="bg-[#1a1a1d] p-4 rounded-3xl border border-white/5 flex items-center gap-4">
+                        <img src={car.image_url} className="w-16 h-16 rounded-2xl object-cover bg-black/20" alt="" />
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full">{car.city}</span>
-                                <span className="text-[10px] text-slate-500">#{car.sort_number}</span>
-                            </div>
-                            <h4 className="font-bold truncate text-slate-200 mt-1">{car.title}</h4>
-                            <p className="text-xs text-slate-400">{car.price_per_day}₽/сутки</p>
+                            <h4 className="text-white font-bold truncate">{car.brand} {car.model}</h4>
+                            <p className="text-[10px] text-primary font-bold uppercase">{car.city} • ${car.price_per_day}/d</p>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => startEdit(car)} className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                            <button onClick={() => handleDelete(car.id)} className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                             <button onClick={() => { setIsEditing(car); setFormData(car); }} className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-400"><span className="material-symbols-outlined text-[20px]">edit</span></button>
+                             <button onClick={() => setConfirmTarget(car)} className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-red-400"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                         </div>
                     </div>
                 ))}
             </div>
         </div>
     );
-};
-
-export default AdminCars;
+}

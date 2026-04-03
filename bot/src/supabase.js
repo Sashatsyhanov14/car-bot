@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const dotenv = require('dotenv');
-const path = require('path');
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+dotenv.config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,15 +36,6 @@ module.exports = {
       .single();
 
     if (error) console.error('Supabase createUser error:', error.message);
-    return { data, error };
-  },
-
-  async getExcursions() {
-    const { data, error } = await supabase
-      .from('excursions')
-      .select('id, sort_number, city, title, description, price_rub, duration, included, meeting_point, image_url')
-      .eq('is_active', true)
-      .order('sort_number', { ascending: true });
     return { data, error };
   },
 
@@ -98,25 +89,22 @@ module.exports = {
     return { data, error };
   },
 
-  async createRequest(userId, excursionId, excursionTitle, fullName, tourDate, hotelName, priceRub, extraData = {}) {
+  async createRequest(userId, serviceTitle, fullName, tourDate, pickupLocation, priceRub, meta) {
     const reqId = crypto.randomUUID();
-    const insertData = {
-      id: reqId,
-      user_id: userId,
-      excursion_id: excursionId,
-      excursion_title: excursionTitle,
-      full_name: fullName,
-      tour_date: tourDate,
-      hotel_name: hotelName,
-      price_rub: priceRub,
-      status: 'new',
-      created_at: new Date().toISOString(),
-      ...extraData // service_type, car_id, transfer_id, pickup_location, destination, passengers_count
-    };
-
     const { data, error } = await supabase
       .from('requests')
-      .insert([insertData])
+      .insert([{
+        id: reqId,
+        user_id: userId,
+        excursion_title: serviceTitle, // Using existing column for title
+        full_name: fullName,
+        tour_date: tourDate,
+        hotel_name: pickupLocation, // Using existing column for pickup
+        price_rub: priceRub,
+        meta_data: meta || {},
+        status: 'new',
+        created_at: new Date().toISOString()
+      }])
       .select()
       .single();
 

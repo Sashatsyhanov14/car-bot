@@ -2,23 +2,22 @@ const OpenAI = require('openai');
 const dotenv = require('dotenv');
 const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
 
-const path = require('path');
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config();
 
 const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
     defaultHeaders: {
-        'HTTP-Referer': 'https://car.ticaretai.tr',
-        'X-Title': 'Car & Transfer Bot',
+        'HTTP-Referer': 'https://excursion-bot.com',
+        'X-Title': 'Excursion Bot',
     }
 });
 
 module.exports = {
     async getChatResponse(faqText, history, userMessage) {
         try {
-            const { data: cars } = await require('./supabase').getCars();
-            const { data: transfers } = await require('./supabase').getTransfers();
+            const { data: cars } = await getCars();
+            const { data: transfers } = await getTransfers();
 
             // === АГЕНТ 1: АНАЛИТИК (Analyzer) ===
             const analyzerMessages = [
@@ -47,21 +46,21 @@ module.exports = {
                 { role: 'system', content: WRITER_PROMPT(cars || [], transfers || [], faqText) },
                 {
                     role: 'user',
-                    content: `Инструкции от Аналитика:\nНамерение: ${analysis.intent}\nИнструкция: ${analysis.writer_instruction}`
+                    content: `Инструкции от Аналитика:\nНамерение клиента: ${analysis.intent}\nЧто сказать клиенту:\n${analysis.writer_instruction}`
                 }
             ];
 
-            const writerResponse = await openai.chat.completions.create({
+            const writerResponseRaw = await openai.chat.completions.create({
                 model: 'openai/gpt-4o-mini',
                 messages: writerMessages,
                 temperature: 0.7,
             });
 
-            const russianMessage = writerResponse.choices[0].message.content;
+            const russianMessage = writerResponseRaw.choices[0].message.content;
 
             // === АГЕНТ 3: ПЕРЕВОДЧИК (Translator) ===
             let finalMessage = russianMessage;
-            if (analysis.lang_code !== 'ru') {
+            if (analysis.lang_code && analysis.lang_code !== 'ru') {
                 const translatorResponse = await openai.chat.completions.create({
                     model: 'openai/gpt-4o-mini',
                     messages: [
@@ -74,10 +73,9 @@ module.exports = {
             }
 
             // Прикрепляем теги для парсера в index.js
-            let embeddedTags = `[LANG:${analysis.lang_code}]`;
+            let embeddedTags = `[LANG:${analysis.lang_code || 'ru'}]`;
             if (analysis.intent === 'sale' && analysis.item_id) {
-                const infoStr = Buffer.from(JSON.stringify(analysis.collected_info || {})).toString('base64');
-                embeddedTags += `\n[BOOK_REQUEST:${analysis.service_type}:${analysis.item_id}:${infoStr}]`;
+                embeddedTags += `\n[BOOK_REQUEST: ${analysis.service_type || 'car'}:${analysis.item_id}]`;
             }
 
             return finalMessage + '\n' + embeddedTags;
@@ -89,20 +87,19 @@ module.exports = {
     },
 
     // === АГЕНТ 4: МЕНЕДЖЕР-АНАЛИТИК (Manager Alerter) ===
-    async getManagerReport(userData, history, item, bookingDetails) {
+    async getManagerReport(userData, history, excursion, bookingDetails) {
         try {
             const context = `
 Данные клиента: @${userData.username || 'unknown'} (ID: ${userData.telegram_id})
 История переписки (последние 5 сообщений):
 ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: ${h.content}`).join('\n')}
 
-Выбранная услуга: ${item ? (item.title || item.car_info) : 'Не выбрана'}
+Выбранная экскурсия: ${excursion ? excursion.title : 'Не выбрана'}
 Собранные данные для брони:
 - ФИО: ${bookingDetails.fullName || '—'}
 - Дата: ${bookingDetails.tourDate || '—'}
-- Откуда: ${bookingDetails.pickupLocation || '—'}
-- Куда: ${bookingDetails.destination || '—'}
-- Пассажиров: ${bookingDetails.passengersCount || '—'}
+- Отель/Адрес: ${bookingDetails.hotelName || '—'}
+- Телефон (WhatsApp): ${bookingDetails.phone || '—'}
 `;
 
             const response = await openai.chat.completions.create({
@@ -117,7 +114,8 @@ ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: 
             return response.choices[0].message.content;
         } catch (e) {
             console.error('[Manager Alerter Error]:', e.message);
-            return `🚀 **НОВАЯ ЗАЯВКА!**\n\n📌 ${item ? (item.title || item.car_info) : 'Услуга'}\n👤 Клиент: @${userData.username}\n📝 ФИО: ${bookingDetails.fullName}\n📅 Дата: ${bookingDetails.tourDate}`;
+            // Фолбэк на стандартное сообщение, если AI упал
+            return `🚀 **НОВАЯ ЗАЯВКА!**\n\n📈 ${excursion?.title}\n👤 Клиент: @${userData.username}\n📝 ФИО: ${bookingDetails.fullName}\n📅 Дата: ${bookingDetails.tourDate}\n🏨 Отель: ${bookingDetails.hotelName}\n📞 WhatsApp: ${bookingDetails.phone || 'не указан'}`;
         }
     },
 
