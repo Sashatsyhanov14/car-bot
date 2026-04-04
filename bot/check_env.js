@@ -7,7 +7,9 @@ dotenv.config();
 
 async function check() {
     console.log('--- BOT ENVIRONMENT CHECK ---');
-    console.log('Location:', __dirname);
+    const envPath = path.resolve(process.cwd(), '.env');
+    console.log('Context (cwd):', process.cwd());
+    console.log('Looking for .env at:', envPath);
 
     const token = process.env.BOT_TOKEN;
     const sUrl = process.env.SUPABASE_URL;
