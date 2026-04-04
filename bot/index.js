@@ -627,6 +627,13 @@ bot.on('text', async (ctx) => {
             userLangCache[telegramId] = systemLang;
         }
         const uiLang = userLangCache[telegramId];
+        
+        if (!user) {
+            console.error('[AI_CHAT] User is null after check/create. Database might be unreachable.');
+            const errRu = 'Извините, сейчас возникла проблема с подключением к базе данных. Попробуйте позже.';
+            const errText = await getLocalizedText(uiLang, errRu);
+            return ctx.reply(errText);
+        }
 
         // --- PROMO CODE LOGIC ---
         if (!user.referrer_id && /^\d{6,15}$/.test(userText)) {
