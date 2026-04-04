@@ -62,7 +62,12 @@ app.listen(PORT, () => {
             .then(() => console.log(`Webhook set to: ${WEBHOOK_URL}/api/webhook`))
             .catch(err => console.error('Error setting webhook:', err));
     } else {
-        bot.launch()
+        // Clear any persistent webhooks and drop pending updates to avoid 409 Conflict
+        bot.telegram.deleteWebhook({ drop_pending_updates: true })
+            .then(() => {
+                console.log('Webhook deleted, starting Long Polling...');
+                return bot.launch();
+            })
             .then(() => console.log('Bot started with Long Polling'))
             .catch(err => console.error('Error launching bot:', err));
     }

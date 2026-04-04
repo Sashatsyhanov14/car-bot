@@ -3,13 +3,14 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('Missing Supabase credentials in .env');
 }
 
+console.log(`Supabase connecting to: ${supabaseUrl} (Key length: ${supabaseKey.length})`);
 const supabase = createClient(supabaseUrl, supabaseKey);
 const crypto = require('crypto');
 
