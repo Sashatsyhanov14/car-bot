@@ -28,7 +28,7 @@ const EMPTY_TRANS = {
     is_active: true
 };
 
-const AdminFleet: React.FC = () => {
+const AdminFleet: React.FC<{ t: any }> = ({ t }) => {
     const [view, setView] = useState<'cars' | 'transfers'>('cars');
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ const AdminFleet: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure?')) return;
+        if (!confirm(t.deleteConfirm)) return;
         await supabase.from(view === 'cars' ? 'cars' : 'transfers').delete().eq('id', id);
         fetchItems();
     };
@@ -103,13 +103,13 @@ const AdminFleet: React.FC = () => {
                     onClick={() => { setView('cars'); setFormData(EMPTY_CAR); setIsEditing(null); }}
                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${view === 'cars' ? 'bg-primary text-black shadow-lg' : 'text-slate-500'}`}
                 >
-                    Cars
+                    {t.viewCars}
                 </button>
                 <button 
                     onClick={() => { setView('transfers'); setFormData(EMPTY_TRANS); setIsEditing(null); }}
                     className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${view === 'transfers' ? 'bg-primary text-black shadow-lg' : 'text-slate-500'}`}
                 >
-                    Transfers
+                    {t.viewTransfers}
                 </button>
             </div>
 
@@ -119,20 +119,20 @@ const AdminFleet: React.FC = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[40px] -z-10" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <span className="material-symbols-outlined">{isEditing === 'new' ? 'add_circle' : 'edit'}</span>
-                        {isEditing === 'new' ? 'Add Item' : 'Edit Item'}
+                        {isEditing === 'new' ? t.addItem : t.editItem}
                     </h3>
                     
                     {view === 'cars' ? (
                         <>
                             <div className="grid grid-cols-2 gap-3">
-                                <input placeholder="Brand" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                                <input placeholder="Model" value={formData.model} onChange={e => setFormData({...formData, model: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input placeholder={t.brand} value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input placeholder={t.model} value={formData.model} onChange={e => setFormData({...formData, model: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <input placeholder="City" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                                <input type="number" placeholder="Price / Day" value={formData.price_per_day} onChange={e => setFormData({...formData, price_per_day: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input placeholder={t.city} value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input type="number" placeholder={t.pricePerDay} value={formData.price_per_day} onChange={e => setFormData({...formData, price_per_day: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                             </div>
-                            <textarea placeholder="Description" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                            <textarea placeholder={t.description} rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                             
                             {/* Photo Preview Gallery */}
                             {formData.image_urls && formData.image_urls.length > 0 && (
@@ -158,10 +158,10 @@ const AdminFleet: React.FC = () => {
                     ) : (
                         <>
                             <div className="grid grid-cols-2 gap-3">
-                                <input placeholder="From" value={formData.from_location} onChange={e => setFormData({...formData, from_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                                <input placeholder="To" value={formData.to_location} onChange={e => setFormData({...formData, to_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input placeholder={t.fromLocation} value={formData.from_location} onChange={e => setFormData({...formData, from_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input placeholder={t.toLocation} value={formData.to_location} onChange={e => setFormData({...formData, to_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                             </div>
-                            <input type="number" placeholder="Price ($)" value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                            <input type="number" placeholder={t.price} value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                             
                             {formData.image_url && (
                                 <div className="flex justify-center">
@@ -177,9 +177,9 @@ const AdminFleet: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <label className="flex-1 h-12 bg-white/5 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all border border-dashed border-white/10">
                             <input type="file" onChange={handleFileUpload} className="hidden" accept="image/*" />
-                            {isUploading ? <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" /> : <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">Add Photo</span>}
+                            {isUploading ? <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" /> : <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">{t.addPhoto}</span>}
                         </label>
-                        <button onClick={handleSave} className="flex-[2] h-12 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Save {view === 'cars' ? 'Car' : 'Route'}</button>
+                        <button onClick={handleSave} className="flex-[2] h-12 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">{view === 'cars' ? t.saveCar : t.saveRoute}</button>
                     </div>
                 </div>
             )}
@@ -192,7 +192,7 @@ const AdminFleet: React.FC = () => {
                         className="w-full py-4 bg-primary/10 text-primary border border-primary/30 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
                         <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                        Add New {view === 'cars' ? 'Car' : 'Transfer'}
+                        {view === 'cars' ? t.addNewCar : t.addNewTransfer}
                     </button>
 
                     <div className="space-y-3">

@@ -213,7 +213,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                 <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-blue-400">notifications_active</span>
-                        <p className="text-xs font-bold text-blue-100 uppercase tracking-wide">Новых заявок ожидает</p>
+                        <p className="text-xs font-bold text-blue-100 uppercase tracking-wide">{t.statsNewRequests}</p>
                     </div>
                     <span className="bg-blue-500 text-black text-[10px] font-black px-3 py-1 rounded-full">{stats.newRequests}</span>
                 </div>
@@ -224,7 +224,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                 <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 overflow-hidden">
                     <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[18px]">payments</span>
-                        <h3 className="text-sm font-bold text-slate-200">Реферальная аналитика и выплаты</h3>
+                        <h3 className="text-sm font-bold text-slate-200">{t.refAnalytics}</h3>
                     </div>
                     <div className="divide-y divide-white/5">
                         {referralRows.map(ref => (
@@ -256,17 +256,17 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xl font-black text-primary tracking-tighter">${ref.balance}</p>
-                                        <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">баланс</p>
+                                        <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">{t.refBalance}</p>
                                     </div>
                                 </div>
 
                                 {/* Stats row */}
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
-                                        { label: 'Привёл', value: ref.invitedCount, color: 'text-blue-400' },
-                                        { label: 'Заявок', value: ref.requestCount, color: 'text-green-400' },
-                                        { label: 'Конверсия', value: `${ref.conversion}%`, color: 'text-purple-400' },
-                                        { label: 'Выручка', value: `$${ref.revenue}`, color: 'text-primary' },
+                                        { label: t.refInvited, value: ref.invitedCount, color: 'text-blue-400' },
+                                        { label: t.refRequests, value: ref.requestCount, color: 'text-green-400' },
+                                        { label: t.refConversion, value: `${ref.conversion}%`, color: 'text-purple-400' },
+                                        { label: t.refRevenue, value: `$${ref.revenue}`, color: 'text-primary' },
                                     ].map(s => (
                                         <div key={s.label} className="bg-black/20 p-2 rounded-xl text-center">
                                             <p className={`text-sm font-black ${s.color}`}>{s.value}</p>
@@ -294,12 +294,12 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                         disabled={ref.balance <= 0}
                                         className="flex-1 py-2.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
-                                        Выплатить ${ref.balance}
+                                        {t.refPayoutBtn} ${ref.balance}
                                     </button>
                                     {ref.totalPaid > 0 && (
                                         <div className="px-3 py-2.5 bg-black/20 rounded-xl text-center min-w-[80px]">
                                             <p className="text-[10px] font-black text-slate-400">${ref.totalPaid.toFixed(0)}</p>
-                                            <p className="text-[8px] text-slate-600 uppercase">выплачено</p>
+                                            <p className="text-[8px] text-slate-600 uppercase">{t.refPaid}</p>
                                         </div>
                                     )}
                                 </div>
@@ -316,7 +316,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                         <details className="text-[10px]">
                                             <summary className="text-slate-400 cursor-pointer hover:text-slate-200 font-bold uppercase tracking-wider flex items-center gap-1 outline-none">
                                                 <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                                                Заявки ({ref.requests.length})
+                                                {t.refOrders} ({ref.requests.length})
                                             </summary>
                                             <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                                 {ref.requests.map((r: any, i: number) => (
@@ -339,7 +339,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                         <details className="text-[10px]">
                                             <summary className="text-slate-400 cursor-pointer hover:text-slate-200 font-bold uppercase tracking-wider flex items-center gap-1 outline-none">
                                                 <span className="material-symbols-outlined text-[14px]">group</span>
-                                                Приглашённые ({ref.invitees.length})
+                                                {t.refInvitedUsers} ({ref.invitees.length})
                                             </summary>
                                             <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                                 {ref.invitees.map((u: any, i: number) => (
@@ -356,7 +356,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                 {/* Payout history */}
                                 {ref.payouts.length > 0 && (
                                     <details className="text-[10px]">
-                                        <summary className="text-slate-500 cursor-pointer hover:text-slate-300 font-bold uppercase tracking-wider">История выплат ({ref.payouts.length})</summary>
+                                        <summary className="text-slate-500 cursor-pointer hover:text-slate-300 font-bold uppercase tracking-wider">{t.refHistory} ({ref.payouts.length})</summary>
                                         <div className="mt-2 space-y-1 pl-2">
                                             {ref.payouts.map((p: any, i: number) => (
                                                 <p key={i} className="text-slate-400 font-mono">{p.content.replace(PAYOUT_PREFIX, '').trim()}</p>
@@ -375,12 +375,12 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                 <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
-                        <h3 className="text-sm font-bold text-slate-200">Последние заявки</h3>
+                        <h3 className="text-sm font-bold text-slate-200">{t.recentRequests}</h3>
                     </div>
-                    <button onClick={fetchRequests} className="text-[10px] font-black text-primary uppercase tracking-widest">Обновить</button>
+                    <button onClick={fetchRequests} className="text-[10px] font-black text-primary uppercase tracking-widest">{t.refresh}</button>
                 </div>
                 <div className="p-2 space-y-2">
-                    {reqLoading ? <div className="text-center py-4 opacity-50">...</div> : requests.length === 0 ? <p className="text-center py-4 text-xs text-slate-500">Заявок нет</p> : requests.map(req => (
+                    {reqLoading ? <div className="text-center py-4 opacity-50">...</div> : requests.length === 0 ? <p className="text-center py-4 text-xs text-slate-500">{t.noRequests}</p> : requests.map(req => (
                         <div key={req.id} className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-3">
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
@@ -399,8 +399,8 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                 <p className="text-slate-500">{new Date(req.created_at).toLocaleDateString()}</p>
                             </div>
                             <div className="flex gap-2 pt-2 border-t border-white/5">
-                                <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-2 text-[9px] font-black bg-yellow-500/10 text-yellow-500 rounded-lg uppercase">Связался</button>
-                                <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-2 text-[9px] font-black bg-green-500/10 text-green-500 rounded-lg uppercase">Готово</button>
+                                <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-2 text-[9px] font-black bg-yellow-500/10 text-yellow-500 rounded-lg uppercase">{t.statusContacted}</button>
+                                <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-2 text-[9px] font-black bg-green-500/10 text-green-500 rounded-lg uppercase">{t.statusDone}</button>
                             </div>
                         </div>
                     ))}

@@ -194,13 +194,18 @@ bot.start(async (ctx) => {
                 username: username,
                 role: 'user',
                 referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
-                balance: 0
+                balance: 0,
+                language_code: ctx.from.language_code || 'ru'
             });
             user = newUser;
         }
 
-        const lang = ctx.from.language_code || 'ru';
+        const lang = user?.language_code || ctx.from.language_code || 'ru';
         userLangCache[telegramId] = lang;
+
+        if (user && !user.language_code) {
+            await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId);
+        }
 
         const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим? Напишите город или просто спросите, что у нас есть.`;
         const welcomeText = await getLocalizedText(lang, welcomeRu);
@@ -592,8 +597,14 @@ bot.on('text', async (ctx) => {
 
         const aiResponse = await getChatResponse(cars, transfers, faqText, history, userText);
 
-        const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);
-        if (langMatch) userLangCache[telegramId] = langMatch[1].toLowerCase();
+        const langMatch = aiResponse.match(/\[LANG:\s*([a-z]{2})\]/i);
+        if (langMatch) {
+            const newLang = langMatch[1].toLowerCase();
+            if (userLangCache[telegramId] !== newLang) {
+                userLangCache[telegramId] = newLang;
+                await supabase.from('users').update({ language_code: newLang }).eq('telegram_id', telegramId).catch(() => {});
+            }
+        }
 
         const bookMatch = aiResponse.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         let finalResponse = aiResponse.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();

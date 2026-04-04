@@ -20,6 +20,7 @@ CREATE TABLE public.users (
     role text DEFAULT 'user'::text,
     balance numeric DEFAULT 0,
     referrer_id bigint REFERENCES public.users(telegram_id),
+    language_code text DEFAULT 'ru',
     created_at timestamptz DEFAULT now()
 );
 
@@ -31,9 +32,13 @@ CREATE TABLE public.cars (
     city text NOT NULL,
     price_per_day numeric NOT NULL,
     body_style text,
+    body_style_en text, body_style_tr text, body_style_de text, body_style_pl text, body_style_ar text, body_style_fa text,
     transmission text DEFAULT 'Automatic'::text,
+    transmission_en text, transmission_tr text, transmission_de text, transmission_pl text, transmission_ar text, transmission_fa text,
     fuel_type text DEFAULT 'Petrol'::text,
+    fuel_type_en text, fuel_type_tr text, fuel_type_de text, fuel_type_pl text, fuel_type_ar text, fuel_type_fa text,
     description text,
+    description_en text, description_tr text, description_de text, description_pl text, description_ar text, description_fa text,
     image_url text,
     image_urls text[] DEFAULT '{}'::text[],
     sort_number integer DEFAULT 1,
@@ -45,10 +50,13 @@ CREATE TABLE public.cars (
 CREATE TABLE public.transfers (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     from_location text NOT NULL,
+    from_location_en text, from_location_tr text, from_location_de text, from_location_pl text, from_location_ar text, from_location_fa text,
     to_location text NOT NULL,
+    to_location_en text, to_location_tr text, to_location_de text, to_location_pl text, to_location_ar text, to_location_fa text,
     car_type text DEFAULT 'Standard'::text,
     price numeric NOT NULL,
     description text,
+    description_en text, description_tr text, description_de text, description_pl text, description_ar text, description_fa text,
     image_url text,
     sort_number integer DEFAULT 1,
     is_active boolean DEFAULT true,

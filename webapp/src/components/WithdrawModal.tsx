@@ -7,7 +7,7 @@ interface WithdrawModalProps {
     lang: 'ru' | 'tr';
 }
 
-const translations = {
+const translations: any = {
     ru: {
         title: "Вывод бонусов",
         amountLabel: "Сумма (Макс: {balance} $)",
@@ -17,6 +17,15 @@ const translations = {
         submit: "Отправить запрос",
         alert: "Заявка на вывод {amount} $ ({method}) отправлена менеджеру!"
     },
+    en: {
+        title: "Bonus Withdrawal",
+        amountLabel: "Amount (Max: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Payment Method (Card / USDT / Number)",
+        methodPlaceholder: "Details...",
+        submit: "Submit Request",
+        alert: "Withdrawal request for {amount} $ ({method}) sent to manager!"
+    },
     tr: {
         title: "Bonus Çekimi",
         amountLabel: "Tutar (Maks: {balance} $)",
@@ -25,6 +34,42 @@ const translations = {
         methodPlaceholder: "Hesap Bilgileri...",
         submit: "Talebi Gönder",
         alert: "Çekim talebi {amount} $ ({method}) yöneticiye gönderildi!"
+    },
+    de: {
+        title: "Bonus Auszahlen",
+        amountLabel: "Betrag (Max: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Zahlungsmethode (Karte / USDT / Nummer)",
+        methodPlaceholder: "Details...",
+        submit: "Anfrage senden",
+        alert: "Auszahlungsanfrage über {amount} $ ({method}) wurde gesendet!"
+    },
+    pl: {
+        title: "Wypłata Bonusów",
+        amountLabel: "Kwota (Maks: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Metoda płatności (Karta / USDT / Numer)",
+        methodPlaceholder: "Szczegóły...",
+        submit: "Wyślij prośbę",
+        alert: "Prośba o wypłatę {amount} $ ({method}) została wysłana!"
+    },
+    ar: {
+        title: "سحب المكافآت",
+        amountLabel: "المبلغ (الحد الأقصى: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "طريقة الدفع (بطاقة / USDT / رقم)",
+        methodPlaceholder: "التفاصيل...",
+        submit: "إرسال الطلب",
+        alert: "تم إرسال طلب سحب بقيمة {amount} $ ({method}) إلى المدير!"
+    },
+    fa: {
+        title: "برداشت پاداش",
+        amountLabel: "مبلغ (حداکثر: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "روش پرداخت (کارت / USDT / شماره)",
+        methodPlaceholder: "جزئیات...",
+        submit: "ارسال درخواست",
+        alert: "درخواست برداشت {amount} $ ({method}) برای مدیر ارسال شد!"
     }
 };
 

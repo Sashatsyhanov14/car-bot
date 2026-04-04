@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-const AdminRequests: React.FC<{ t?: any }> = () => {
+const AdminRequests: React.FC<{ t: any }> = ({ t }) => {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -42,11 +42,11 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
         }
     };
 
-    if (loading) return <div className="text-center py-10 opacity-50">Загрузка заявок...</div>;
+    if (loading) return <div className="text-center py-10 opacity-50">{t.loading}</div>;
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            {requests.length === 0 && <div className="text-center py-20 text-slate-500">Заявок пока нет</div>}
+            {requests.length === 0 && <div className="text-center py-20 text-slate-500">{t.noRequests}</div>}
 
             {requests.map(req => {
                 const meta = req.meta_data || {};
@@ -65,7 +65,7 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
                                     <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full">{req.service_type || 'excursion'}</span>
                                 </div>
                                 <h4 className="font-bold text-slate-100 text-lg">
-                                    {isTransfer ? `${meta.from} -> ${meta.to}` : (req.excursion_title || 'Заявка')}
+                                    {isTransfer ? `${meta.from} -> ${meta.to}` : (req.excursion_title || t.recentRequests)}
                                 </h4>
                             </div>
                             <p className="text-primary font-bold text-lg">${req.price_rub}</p>
@@ -73,7 +73,7 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
 
                         <div className="grid grid-cols-2 gap-3 text-xs">
                             <div className="bg-black/20 p-3 rounded-2xl border border-white/5">
-                                <p className="text-slate-500 mb-1 uppercase font-black tracking-widest text-[9px]">Клиент</p>
+                                <p className="text-slate-500 mb-1 uppercase font-black tracking-widest text-[9px]">{t.client}</p>
                                 <p className="font-bold text-slate-200">@{req.users?.username || 'user'}</p>
                                 <p className="text-slate-400 mt-1">{req.full_name}</p>
                                 <p className="text-primary font-mono mt-1">{req.user_id}</p>
@@ -107,9 +107,9 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
                         )}
 
                         <div className="flex gap-2 border-t border-white/5 pt-4">
-                            <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-3 text-[10px] font-black bg-yellow-500/10 text-yellow-400 rounded-xl hover:bg-yellow-500/20 transition-all uppercase tracking-widest">Связался</button>
-                            <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-3 text-[10px] font-black bg-green-500/10 text-green-400 rounded-xl hover:bg-green-500/20 transition-all uppercase tracking-widest">Готово</button>
-                            <button onClick={() => updateStatus(req.id, 'cancelled')} className="flex-1 py-3 text-[10px] font-black bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all uppercase tracking-widest">Отмена</button>
+                            <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-3 text-[10px] font-black bg-yellow-500/10 text-yellow-400 rounded-xl hover:bg-yellow-500/20 transition-all uppercase tracking-widest">{t.statusContacted}</button>
+                            <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-3 text-[10px] font-black bg-green-500/10 text-green-400 rounded-xl hover:bg-green-500/20 transition-all uppercase tracking-widest">{t.statusDone}</button>
+                            <button onClick={() => updateStatus(req.id, 'cancelled')} className="flex-1 py-3 text-[10px] font-black bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all uppercase tracking-widest">{t.cancelBtn}</button>
                         </div>
                     </div>
                 );

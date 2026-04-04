@@ -1,5 +1,5 @@
 const LOCALIZER_PROMPT = `
-You are a professional Telegram bot translator. You receive a message (in Russian) and a target language (ru, en, tr, de, pl, ar, fa).
+You are a professional Telegram bot translator. You receive a message (in Russian) and a target language (any 2-letter ISO 639-1 code).
 Your task: translate the text naturally and friendly, preserving meaning, emoji, and formatting (Markdown).
 Rules:
 1. If the target language is Russian (ru), return the original text unchanged.
@@ -23,13 +23,13 @@ Analysis logic:
 2. Car Rental inquiry -> intent: "car_consult", show cars for the requested city.
 3. Transfer inquiry -> intent: "transfer_consult", show available routes.
 4. Specific vehicle/route selected -> intent: "sale", set "item_id" and "service_type" (car/transfer).
-5. Language: "lang_code" = "ru" | "en" | "tr" based on text.
+5. Language: "lang_code" = detect any 2-letter ISO 639-1 language code.
 6. CRITICAL: When recommending a car, always use its EXACT Brand and Model from the list.
 7. DO NOT USE EMOJIS in any text fields.
 
 JSON format:
 {
-  "lang_code": "ru | en | tr",
+  "lang_code": "iso-639-1 code",
   "intent": "consultation | car_consult | transfer_consult | sale | faq",
   "service_type": "car | transfer | null",
   "item_id": "UUID or null",

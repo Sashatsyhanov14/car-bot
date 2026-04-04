@@ -119,7 +119,7 @@ export default function AdminExcursions({ t }: { t: any }) {
         });
     };
 
-    if (loading) return <div className="text-center py-10 opacity-50 animate-pulse text-white">Загрузка...</div>;
+    if (loading) return <div className="text-center py-10 opacity-50 animate-pulse text-white">{t.loading}</div>;
 
     const photos: string[] = formData.image_urls || [];
 
@@ -151,7 +151,7 @@ export default function AdminExcursions({ t }: { t: any }) {
                 <div className="p-5 space-y-6">
                     {/* Media */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Фотогалерея ({photos.length})</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">{t.photoGallery} ({photos.length})</label>
                         <div className="grid grid-cols-4 gap-2 text-left">
                             {photos.map((url: string, i: number) => (
                                 <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-black/20">
@@ -201,21 +201,19 @@ export default function AdminExcursions({ t }: { t: any }) {
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                        {isEditing && (
-                            <button onClick={() => { setIsEditing(null); setFormData({ ...EMPTY_FORM }); }} className="flex-1 py-4 bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">Отмена</button>
-                        )}
+                             <button onClick={() => { setIsEditing(null); setFormData({ ...EMPTY_FORM }); }} className="flex-1 py-4 bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500">{t.cancelBtn}</button>
                         <button onClick={handleAutoTranslate} className="flex-1 py-4 bg-primary/10 border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-2">
                              <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-                             AI Перевод
+                             {t.aiTranslate}
                         </button>
-                        <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95">Сохранить</button>
+                        <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95">{t.saveBtn}</button>
                     </div>
                 </div>
             </div>
 
             {/* ── LIST ── */}
             <div className="space-y-4">
-                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-2">Все экскурсии ({excursions.length})</h3>
+                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-2">{t.allExcursions} ({excursions.length})</h3>
                 <div className="grid grid-cols-1 gap-4">
                     {excursions.map(ex => (
                         <div key={ex.id} className="bg-[#1a1a1d] p-4 rounded-3xl border border-white/5 flex items-center gap-4 text-left">
