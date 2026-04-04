@@ -12,7 +12,7 @@ const MANAGER_ID = parseInt(process.env.MANAGER_ID);
 // Кеш языков и состояний пользователей
 const userLangCache = {};
 const userQrBtnCache = {}; // cached translated QR button text per user
-const lastShownExcursion = {}; // telegramId → excursionId of last shown excursion
+const lastShownItem = {}; // telegramId → itemId of last shown item
 const userStates = new Map(); // { telegramId: { step: 'name'|'date'|'hotel', excursionId, data: {} } }
 
 // QR button keywords for detection in any language
@@ -109,7 +109,7 @@ bot.action(/^bonus_req_(.+)$/, async (ctx) => {
 
             try {
                 const refLang = userLangCache[buyer.referrer_id] || 'ru';
-                const refRu = `💰 Вам начислено $${reward} (1% от заявки на экскурсию «${request.excursion_title}»)! Ваш баланс: $${newBalance}`;
+                const refRu = `💰 Вам начислено $${reward} (1% от заявки на «${request.excursion_title}»)! Ваш баланс: $${newBalance}`;
                 const refMsg = await getLocalizedText(refLang, refRu);
                 await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
             } catch (e) { }
@@ -120,7 +120,7 @@ bot.action(/^bonus_req_(.+)$/, async (ctx) => {
             );
             await ctx.answerCbQuery(`✅ Бонус $${reward} успешно начислен!`, { show_alert: true });
         } else {
-            await ctx.answerCbQuery('⚠️ У этого клиента нет реферера или не указана стоимость экскурсии.', { show_alert: true });
+            await ctx.answerCbQuery('⚠️ У этого клиента нет реферера или не указана стоимость услуги.', { show_alert: true });
         }
     } catch (e) {
         console.error('Bonus action error:', e.message);
@@ -134,7 +134,7 @@ bot.action(/^start_chat_book_(.+)$/, async (ctx) => {
     const { data: excursions } = await getExcursions();
     const selectedEx = excursions ? excursions.find(e => e.id === excursionId) : null;
     
-    if (!selectedEx) return ctx.answerCbQuery('❌ Экскурсия не найдена.', { show_alert: true });
+    if (!selectedEx) return ctx.answerCbQuery('❌ Услуга не найдена.', { show_alert: true });
 
     userStates.set(telegramId, { step: 'name', excursionId, data: {} });
     const lang = userLangCache[telegramId] || 'ru';
@@ -353,7 +353,7 @@ async function handleWebAppData(ctx, dataStr) {
         // --- Bulk Translate All ---
         if (data.type === 'bulk_translate_all') {
             const { data: excursions } = await supabase.from('excursions').select('*');
-            if (!excursions || excursions.length === 0) return ctx.reply('❌ Экскурсии не найдены.');
+            if (!excursions || excursions.length === 0) return ctx.reply('❌ Элементы не найдены.');
 
             ctx.reply(`🚀 *Начинаю массовый перевод всего каталога (${excursions.length} шт.)...*\nЭто может занять время, я сообщу о результате.`, { parse_mode: 'Markdown' });
 
@@ -381,7 +381,7 @@ async function handleWebAppData(ctx, dataStr) {
                 }
             }
 
-            return ctx.reply(`✨ *Массовый перевод завершен!*\n\nОбновлено экскурсий: *${updatedCount}* из *${excursions.length}*.\nВсе языки (En, Tr, De, Pl, Ar, Fa) теперь заполнены!`, { parse_mode: 'Markdown' });
+            return ctx.reply(`✨ *Массовый перевод завершен!*\n\nОбновлено элементов: *${updatedCount}* из *${excursions.length}*.\nВсе языки (En, Tr, De, Pl, Ar, Fa) теперь заполнены!`, { parse_mode: 'Markdown' });
         }
 
         // --- Withdraw Request ---
@@ -488,7 +488,7 @@ bot.on('text', async (ctx) => {
                     } else {
                         await bot.telegram.sendMediaGroup(telegramId, photos.slice(0, 10).map(url => ({ type: 'photo', media: url })));
                     }
-                    const replyRu = `📸 Фотографии экскурсии «${foundEx.title}»!`;
+                    const replyRu = `📸 Фотографии по вашему запросу («${foundEx.title}»)!`;
                     const reply = await getLocalizedText(lang, replyRu);
                     await ctx.reply(reply);
                 } catch (e) {
@@ -497,11 +497,11 @@ bot.on('text', async (ctx) => {
                     await ctx.reply(await getLocalizedText(lang, errRu));
                 }
             } else {
-                const noPhotoRu = `😔 У экскурсии «${foundEx.title}» пока нет фотографий. Хочешь узнать подробности или забронировать?`;
+                const noPhotoRu = `😔 У «${foundEx.title}» пока нет добавочных фотографий. Хочешь узнать подробности или забронировать?`;
                 await ctx.reply(await getLocalizedText(lang, noPhotoRu));
             }
         } else {
-            const notFoundRu = `Напиши, какая экскурсия тебя интересует — и я покажу фото! 📸`;
+            const notFoundRu = `Напиши, что именно тебя интересует — и я покажу фото! 📸`;
             await ctx.reply(await getLocalizedText(lang, notFoundRu));
         }
         return;
@@ -637,7 +637,7 @@ bot.on('text', async (ctx) => {
                     await supabase.from('users').update({ referrer_id: promoId }).eq('telegram_id', telegramId);
                     user.referrer_id = promoId;
 
-                    const successRu = '✅ Промокод успешно применён! Спасибо.\n\nА теперь расскажи, куда планируешь экскурсию? 🌍';
+                    const successRu = '✅ Промокод успешно применён! Спасибо.\n\nА теперь расскажи, какой автомобиль или трансфер тебя интересует? 🚗';
                     const successText = await getLocalizedText(uiLang, successRu);
                     return ctx.reply(successText);
                 }
@@ -689,7 +689,7 @@ bot.on('text', async (ctx) => {
         const cleanText = finalResponse.toLowerCase();
         const mentionedEx = excursions.find(ex => cleanText.includes(ex.title.toLowerCase()));
         if (mentionedEx) {
-            lastShownExcursion[telegramId] = mentionedEx.id;
+            lastShownItem[telegramId] = mentionedEx.id;
             await sendExcursionPhotos(telegramId, mentionedEx);
         }
     }
@@ -729,7 +729,7 @@ async function sendExcursionPhotos(telegramId, ex) {
 
 // Запуск
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    bot.launch().then(() => console.log('Excursion Bot with AI Multi-Agents is running...'));
+    bot.launch().then(() => console.log('Car Rental Bot with AI Multi-Agents is running...'));
 }
 
 process.once('SIGINT', () => bot.stop('SIGINT'));

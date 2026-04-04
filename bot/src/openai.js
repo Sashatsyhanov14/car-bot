@@ -8,8 +8,8 @@ const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
     defaultHeaders: {
-        'HTTP-Referer': 'https://excursion-bot.com',
-        'X-Title': 'Excursion Bot',
+        'HTTP-Referer': 'https://car-rental-bot.com',
+        'X-Title': 'Car Rental & Transfer Bot',
     }
 });
 
@@ -87,18 +87,18 @@ module.exports = {
     },
 
     // === АГЕНТ 4: МЕНЕДЖЕР-АНАЛИТИК (Manager Alerter) ===
-    async getManagerReport(userData, history, excursion, bookingDetails) {
+    async getManagerReport(userData, history, item, bookingDetails) {
         try {
             const context = `
 Данные клиента: @${userData.username || 'unknown'} (ID: ${userData.telegram_id})
 История переписки (последние 5 сообщений):
 ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: ${h.content}`).join('\n')}
 
-Выбранная экскурсия: ${excursion ? excursion.title : 'Не выбрана'}
+Выбранная услуга: ${item ? item.title || item.brand + ' ' + item.model : 'Не выбрана'}
 Собранные данные для брони:
 - ФИО: ${bookingDetails.fullName || '—'}
 - Дата: ${bookingDetails.tourDate || '—'}
-- Отель/Адрес: ${bookingDetails.hotelName || '—'}
+- Место встречи: ${bookingDetails.hotelName || '—'}
 - Телефон (WhatsApp): ${bookingDetails.phone || '—'}
 `;
 
@@ -115,7 +115,7 @@ ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: 
         } catch (e) {
             console.error('[Manager Alerter Error]:', e.message);
             // Фолбэк на стандартное сообщение, если AI упал
-            return `🚀 **НОВАЯ ЗАЯВКА!**\n\n📈 ${excursion?.title}\n👤 Клиент: @${userData.username}\n📝 ФИО: ${bookingDetails.fullName}\n📅 Дата: ${bookingDetails.tourDate}\n🏨 Отель: ${bookingDetails.hotelName}\n📞 WhatsApp: ${bookingDetails.phone || 'не указан'}`;
+            return `🚀 **НОВАЯ ЗАЯВКА!**\n\n📌 ${item?.title || (item?.brand + ' ' + item?.model)}\n👤 Клиент: @${userData.username}\n📝 ФИО: ${bookingDetails.fullName}\n📅 Дата: ${bookingDetails.tourDate}\n🏨 Место: ${bookingDetails.hotelName}\n📞 WhatsApp: ${bookingDetails.phone || 'не указан'}`;
         }
     },
 
