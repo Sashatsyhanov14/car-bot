@@ -47,6 +47,28 @@ async function check() {
         }
     }
 
+    const aiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+    if (!aiKey) {
+        console.error('❌ OPENAI/OPENROUTER API KEY is missing in .env');
+    } else {
+        const OpenAI = require('openai');
+        const openai = new OpenAI({
+            baseURL: 'https://openrouter.ai/api/v1',
+            apiKey: aiKey.trim()
+        });
+        try {
+            const response = await openai.chat.completions.create({
+                model: 'openai/gpt-4o-mini',
+                messages: [{ role: 'user', content: 'Say hello!' }],
+                max_tokens: 5
+            });
+            console.log('✅ OpenRouter Connection: OK');
+            console.log('   AI Response:', response.choices[0].message.content.trim());
+        } catch (e) {
+            console.error('❌ OpenRouter Error:', e.message);
+        }
+    }
+
     console.log('--- CHECK COMPLETE ---');
 }
 
