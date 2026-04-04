@@ -104,7 +104,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
 
     const handlePayout = async (ref: any) => {
         if (ref.balance <= 0) {
-            setPayoutMsg(prev => ({ ...prev, [ref.telegram_id]: '⚠️ Баланс равен 0' }));
+            setPayoutMsg(prev => ({ ...prev, [ref.telegram_id]: 'Ошибка: Баланс равен 0' }));
             return;
         }
         const amount = ref.balance;
@@ -116,7 +116,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
             role: 'assistant',
             content: `${PAYOUT_PREFIX} $${amount} — выплачено ${new Date().toLocaleDateString('ru-RU')}`
         });
-        setPayoutMsg(prev => ({ ...prev, [ref.telegram_id]: `✅ Выплачено $${amount}` }));
+        setPayoutMsg(prev => ({ ...prev, [ref.telegram_id]: `Успешно: Выплачено $${amount}` }));
         fetchReferralRows();
     };
 
@@ -124,9 +124,9 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
         if (!newManagerId || isNaN(parseInt(newManagerId))) return;
         const id = parseInt(newManagerId);
         const { data: existing } = await supabase.from('users').select('*').eq('telegram_id', id).single();
-        if (!existing) { setManagerMsg(t.managerAddError || '❌ Пользователь не найден.'); return; }
+        if (!existing) { setManagerMsg(t.managerAddError || 'Пользователь не найден.'); return; }
         await supabase.from('users').update({ role: 'manager', note: newManagerNote }).eq('telegram_id', id);
-        setManagerMsg((t.managerAddSuccess || '✅ ID {id} теперь Менеджер.').replace('{id}', String(id)));
+        setManagerMsg((t.managerAddSuccess || 'ID {id} теперь Менеджер.').replace('{id}', String(id)));
         setNewManagerId('');
         setNewManagerNote('');
         fetchManagers();
@@ -139,7 +139,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
 
     const handleRemoveManager = async (id: number) => {
         await supabase.from('users').update({ role: 'user' }).eq('telegram_id', id);
-        setManagerMsg((t.managerRemoveSuccess || '🗑️ Сотрудник {id} удалён.').replace('{id}', String(id)));
+        setManagerMsg((t.managerRemoveSuccess || 'Сотрудник {id} удалён.').replace('{id}', String(id)));
         fetchManagers();
     };
 
@@ -235,7 +235,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                         disabled={ref.balance <= 0}
                                         className="flex-1 py-2.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
-                                        💸 Выплатить ${ref.balance}
+                                        Выплатить ${ref.balance}
                                     </button>
                                     {ref.totalPaid > 0 && (
                                         <div className="px-3 py-2.5 bg-black/20 rounded-xl text-center min-w-[80px]">
@@ -267,7 +267,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                                     <div className="text-right flex-shrink-0">
                                                         <p className="text-primary font-black">${r.price_rub || 0}</p>
                                                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'accepted' ? 'bg-green-500/20 text-green-400' : r.status === 'new' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
-                                                            {r.status === 'accepted' ? '✓' : r.status === 'new' ? 'новая' : r.status}
+                                                            {r.status === 'accepted' ? 'принято' : r.status === 'new' ? 'новая' : r.status}
                                                         </span>
                                                     </div>
                                                 </div>

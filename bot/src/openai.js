@@ -82,7 +82,7 @@ module.exports = {
 
         } catch (error) {
             console.error('[OpenAI Error]:', error);
-            return 'Извини, произошла ошибка. Попробуй чуть позже. 🙏';
+            return 'Извините, произошла ошибка. Пожалуйста, попробуйте позже.';
         }
     },
 
@@ -115,7 +115,7 @@ ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: 
         } catch (e) {
             console.error('[Manager Alerter Error]:', e.message);
             // Фолбэк на стандартное сообщение, если AI упал
-            return `🚀 **НОВАЯ ЗАЯВКА!**\n\n📌 ${item?.title || (item?.brand + ' ' + item?.model)}\n👤 Клиент: @${userData.username}\n📝 ФИО: ${bookingDetails.fullName}\n📅 Дата: ${bookingDetails.tourDate}\n🏨 Место: ${bookingDetails.hotelName}\n📞 WhatsApp: ${bookingDetails.phone || 'не указан'}`;
+            return `НОВАЯ ЗАЯВКА!\n\nУслуга: ${item?.title || (item?.brand + ' ' + item?.model)}\nКлиент: @${userData.username}\nФИО: ${bookingDetails.fullName}\nДата: ${bookingDetails.tourDate}\nМесто: ${bookingDetails.hotelName}\nWhatsApp: ${bookingDetails.phone || 'не указан'}`;
         }
     },
 

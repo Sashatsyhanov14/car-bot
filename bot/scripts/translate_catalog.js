@@ -8,7 +8,7 @@ const { getLocalizedText } = require('../src/openai');
 
 console.log(`[CONFIG] Environment loaded from: ${envPath}`);
 if (!process.env.OPENROUTER_API_KEY && !process.env.OPENAI_API_KEY) {
-    console.error('❌ ERROR: OPENROUTER_API_KEY not found in bot/.env');
+    console.error('ERROR: OPENROUTER_API_KEY not found in bot/.env');
     process.exit(1);
 }
 
@@ -18,18 +18,18 @@ const supabase = createClient(
 );
 
 async function translateAll() {
-    console.log('🚀 Starting AI Translation for Excursions...');
+    console.log('Starting AI Translation for Excursions...');
 
     const { data: excursions, error } = await supabase
         .from('excursions')
         .select('*');
 
     if (error) {
-        console.error('❌ Error fetching excursions:', error.message);
+        console.error('Error fetching excursions:', error.message);
         return;
     }
 
-    console.log(`📦 Found ${excursions.length} excursions. Checking translations...`);
+    console.log(`Found ${excursions.length} excursions. Checking translations...`);
 
     for (const ex of excursions) {
         const updates = {};
@@ -43,14 +43,14 @@ async function translateAll() {
                 const targetKey = `${field}_${lang}`;
                 // Only translate if target is empty and source (Russian) exists
                 if (!ex[targetKey] && ex[field]) {
-                    console.log(`🌐 [${lang.toUpperCase()}] Translating [${ex.title}] ${field}...`);
+                    console.log(`[${lang.toUpperCase()}] Translating [${ex.title}] ${field}...`);
                     try {
                         const translation = await getLocalizedText(lang, ex[field]);
                         if (translation && translation !== ex[field]) {
                             updates[targetKey] = translation;
                         }
                     } catch (e) {
-                        console.error(`⚠️ Failed to translate ${field} for ${ex.id}:`, e.message);
+                        console.error(`FAILED to translate ${field} for ${ex.id}:`, e.message);
                     }
                 }
             }
@@ -63,16 +63,16 @@ async function translateAll() {
                 .eq('id', ex.id);
             
             if (upErr) {
-                console.error(`❌ Error updating ${ex.title}:`, upErr.message);
+                console.error(`Error updating ${ex.title}:`, upErr.message);
             } else {
-                console.log(`✅ Updated ${ex.title} with ${Object.keys(updates).length} new translations.`);
+                console.log(`Updated ${ex.title} with ${Object.keys(updates).length} new translations.`);
             }
         } else {
             console.log(`⏭️ ${ex.title} already translated.`);
         }
     }
 
-    console.log('✨ All translations completed!');
+    console.log('All translations completed!');
 }
 
 translateAll();

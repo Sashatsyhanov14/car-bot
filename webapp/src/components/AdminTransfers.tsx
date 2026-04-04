@@ -60,7 +60,7 @@ export default function AdminTransfers() {
                 {transfers.map(t => (
                     <div key={t.id} className="bg-[#1a1a1d] p-4 rounded-3xl border border-white/5 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold text-white uppercase">{t.from_location} ➡️ {t.to_location}</p>
+                            <p className="text-xs font-bold text-white uppercase">{t.from_location} {'->'} {t.to_location}</p>
                             <p className="text-[10px] text-slate-500 uppercase font-bold mt-1">{t.car_type} • ${t.price}</p>
                         </div>
                         <div className="flex gap-2">

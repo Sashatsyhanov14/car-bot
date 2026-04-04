@@ -11,9 +11,9 @@ module.exports = async (req, res) => {
     const uiLang = lang === 'ru' ? 'ru' : (lang === 'tr' ? 'tr' : 'en');
 
     const texts = {
-        ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegram_id}\``,
-        tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegram_id}\``,
-        en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegram_id}\``
+        ru: `Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegram_id}\``,
+        tr: `İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegram_id}\``,
+        en: `Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegram_id}\``
     };
     const text = texts[uiLang];
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;

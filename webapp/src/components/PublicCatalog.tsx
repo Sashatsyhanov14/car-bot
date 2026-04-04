@@ -83,13 +83,13 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                     onClick={() => setServiceType('car')}
                     className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${serviceType === 'car' ? 'bg-primary text-on-primary shadow-lg' : 'text-slate-400'}`}
                 >
-                    🚗 {lang === 'ru' ? 'Аренда авто' : 'Car Rental'}
+                    {lang === 'ru' ? 'Аренда авто' : 'Car Rental'}
                 </button>
                 <button 
                     onClick={() => setServiceType('transfer')}
                     className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${serviceType === 'transfer' ? 'bg-primary text-on-primary shadow-lg' : 'text-slate-400'}`}
                 >
-                    ✈️ {lang === 'ru' ? 'Трансферы' : 'Transfers'}
+                    {lang === 'ru' ? 'Трансферы' : 'Transfers'}
                 </button>
             </div>
 
@@ -120,7 +120,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                                     <p className="text-[10px] font-bold text-slate-500 uppercase">From</p>
                                     <p className="font-bold text-white leading-tight">{t.from_location}</p>
                                 </div>
-                                <div className="text-primary">➡️</div>
+                                <div className="text-primary">→</div>
                                 <div className="flex-1 text-center">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase">To</p>
                                     <p className="font-bold text-white leading-tight">{t.to_location}</p>
@@ -143,7 +143,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                      </button>
                      <img src={selectedItem.image_url || selectedItem.image_urls?.[0]} className="w-full aspect-video object-cover rounded-3xl mb-6 shadow-2xl" alt="" />
                      <h2 className="text-3xl font-black text-white mb-2">
-                        {serviceType === 'car' ? `${selectedItem.brand} ${selectedItem.model}` : `${selectedItem.from_location} ➡️ ${selectedItem.to_location}`}
+                        {serviceType === 'car' ? `${selectedItem.brand} ${selectedItem.model}` : `${selectedItem.from_location} → ${selectedItem.to_location}`}
                      </h2>
                      <p className="text-slate-400 text-sm leading-relaxed mb-8">{selectedItem.description}</p>
                      

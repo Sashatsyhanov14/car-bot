@@ -65,7 +65,7 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
                                     <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full">{req.service_type || 'excursion'}</span>
                                 </div>
                                 <h4 className="font-bold text-slate-100 text-lg">
-                                    {isTransfer ? `${meta.from} ➔ ${meta.to}` : (req.excursion_title || 'Заявка')}
+                                    {isTransfer ? `${meta.from} -> ${meta.to}` : (req.excursion_title || 'Заявка')}
                                 </h4>
                             </div>
                             <p className="text-primary font-bold text-lg">${req.price_rub}</p>
@@ -83,18 +83,18 @@ const AdminRequests: React.FC<{ t?: any }> = () => {
                                 <p className="text-slate-500 mb-1 uppercase font-black tracking-widest text-[9px]">Детали</p>
                                 {isTransfer ? (
                                     <>
-                                        <p className="font-medium text-slate-200">👥 Пассажиров: {meta.passengers}</p>
-                                        <p className="font-medium text-slate-200 mt-1">📅 {req.tour_date}</p>
+                                        <p className="font-medium text-slate-200">Пассажиров: {meta.passengers}</p>
+                                        <p className="font-medium text-slate-200 mt-1">Океан: {req.tour_date}</p>
                                     </>
                                 ) : isCar ? (
                                     <>
-                                        <p className="font-medium text-slate-200">🚗 {req.excursion_title}</p>
-                                        <p className="font-medium text-slate-200 mt-1">📅 {req.tour_date}</p>
+                                        <p className="font-medium text-slate-200">{req.excursion_title}</p>
+                                        <p className="font-medium text-slate-200 mt-1">Дата: {req.tour_date}</p>
                                     </>
                                 ) : (
                                     <>
-                                        <p className="font-medium text-slate-200">📅 {req.tour_date}</p>
-                                        <p className="font-medium text-slate-200 mt-1 truncate">🏨 {req.hotel_name}</p>
+                                        <p className="font-medium text-slate-200">Дата: {req.tour_date}</p>
+                                        <p className="font-medium text-slate-200 mt-1 truncate">Место: {req.hotel_name}</p>
                                     </>
                                 )}
                             </div>

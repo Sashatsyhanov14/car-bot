@@ -35,7 +35,7 @@ app.post('/api/send-qr', async (req, res) => {
 
         const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
 
-        const caption = `🔗 Link: ${refLink}\n🎁 Promo: ${telegram_id}`;
+        const caption = `Link: ${refLink}\nPromo: ${telegram_id}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}`;
         await bot.telegram.sendPhoto(telegram_id, qrUrl, { caption });
 
