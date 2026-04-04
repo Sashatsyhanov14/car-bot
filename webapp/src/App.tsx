@@ -567,7 +567,7 @@ if (loading) return (
   }
 
   const isOwner = user.role === 'founder' || user.role === 'manager';
-  const refLink = `https://t.me/Emedeotour_bot?start=${user.telegram_id}`;
+  const refLink = `https://t.me/emedeorentacat_bot?start=${user.telegram_id}`;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -675,7 +675,7 @@ if (loading) return (
                 <button
                   onClick={() => {
                     // openTelegramLink triggers the bot with a start payload — most reliable method
-                    const link = `https://t.me/Emedeotour_bot?start=getqr_${user.telegram_id}`;
+                    const link = `https://t.me/emedeorentacat_bot?start=getqr_${user.telegram_id}`;
                     try {
                       tg?.openTelegramLink(link);
                     } catch {

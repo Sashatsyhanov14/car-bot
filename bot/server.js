@@ -33,7 +33,7 @@ app.post('/api/send-qr', async (req, res) => {
         const { telegram_id } = req.body;
         if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
 
-        const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
+        const refLink = `https://t.me/emedeorentacat_bot?start=${telegram_id}`;
 
         const caption = `Link: ${refLink}\nPromo: ${telegram_id}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}`;

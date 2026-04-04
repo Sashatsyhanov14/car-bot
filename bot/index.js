@@ -171,7 +171,7 @@ bot.start(async (ctx) => {
         // --- QR DEEP LINK from WebApp button ---
         if (startPayload && startPayload.startsWith('getqr_')) {
             const lang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
-            const botUsername = ctx.botInfo?.username || 'Emedeotour_bot';
+            const botUsername = ctx.botInfo?.username || 'emedeorentacat_bot';
             const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=15&bgcolor=ffffff`;
             const captionRu = `Link: \`${refLink}\` \nPromo: \`${telegramId}\` \n\nПоделитесь QR или промокодом — получайте 1$ за каждого друга.`;
@@ -378,7 +378,7 @@ bot.on('text', async (ctx) => {
 
     if (isQrRequest) {
         const lang = userLangCache[telegramId] || 'ru';
-        const botUsername = ctx.botInfo?.username || '';
+        const botUsername = ctx.botInfo?.username || 'emedeorentacat_bot';
         const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=15&bgcolor=ffffff`;
 
