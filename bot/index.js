@@ -201,11 +201,12 @@ bot.start(async (ctx) => {
             user = newUser;
         }
 
-        const lang = user?.language_code || ctx.from.language_code || 'ru';
+        // Default to system language if it's a fresh start, otherwise use DB/History
+        const lang = ctx.from.language_code || 'ru';
         userLangCache[telegramId] = lang;
 
         if (user && !user.language_code) {
-            await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId);
+            await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId).catch(() => {});
         }
 
         const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим? Напишите город или просто спросите, что у нас есть.`;
@@ -598,7 +599,12 @@ bot.on('text', async (ctx) => {
 
         const aiResponse = await getChatResponse(cars, transfers, faqText, history, userText);
 
+        const bookMatch = aiResponse.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         const langMatch = aiResponse.match(/\[LANG:\s*([a-z]{2})\]/i);
+        
+        let finalResponse = aiResponse.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+
+        // 1. Handle Language Update from AI detection
         if (langMatch) {
             const newLang = langMatch[1].toLowerCase();
             if (userLangCache[telegramId] !== newLang) {
@@ -607,22 +613,32 @@ bot.on('text', async (ctx) => {
             }
         }
 
-        const bookMatch = aiResponse.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
-        let finalResponse = aiResponse.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
-
+        // 2. Handle matched item (Photos and booking)
         if (bookMatch) {
             const serviceType = bookMatch[1].trim();
             const itemId = bookMatch[2].trim();
             
-            // Start the stepper for gathering details
-            userStates.set(telegramId, { step: 'name', serviceType, itemId, data: {} });
-            
-            const promptRu = `Отлично! Я помогу вам забронировать ${serviceType === 'car' ? 'автомобиль' : 'трансфер'}. Как к вам можно обращаться? Напишите ваше ФИО.`;
-            const prompt = await getLocalizedText(userLangCache[telegramId] || 'ru', promptRu);
-            
-            await saveMessage(telegramId, 'assistant', finalResponse);
-            try { await ctx.reply(finalResponse, { parse_mode: 'Markdown' }); } catch (e) { await ctx.reply(finalResponse); }
-            return ctx.reply(prompt, Markup.inlineKeyboard([[Markup.button.callback('Отмена', 'cancel_stepper')]]));
+            // Find the item in our local data to get details/photos
+            const item = serviceType === 'car' 
+                ? (cars || []).find(c => c.id === itemId)
+                : (transfers || []).find(t => t.id === itemId);
+
+            if (item) {
+                lastShownItem[telegramId] = itemId;
+                await sendItemPhotos(telegramId, item);
+            }
+
+            // Only start booking flow if the AI explicitly moved to 'sale' intent (detected by response text containing booking questions or explicit intent markers)
+            // But for now, we'll follow the existing logic: if BOOK_REQUEST is there AND the AI is asking for details
+            if (finalResponse.includes('ФИО') || finalResponse.toLowerCase().includes('имя') || finalResponse.toLowerCase().includes('дата')) {
+                userStates.set(telegramId, { step: 'name', serviceType, itemId, data: {} });
+                const promptRu = `Отлично! Я помогу с бронированием. Напишите ваше ФИО.`;
+                const prompt = await getLocalizedText(userLangCache[telegramId] || 'ru', promptRu);
+                
+                await saveMessage(telegramId, 'assistant', finalResponse);
+                try { await ctx.reply(finalResponse, { parse_mode: 'Markdown' }); } catch (e) { await ctx.reply(finalResponse); }
+                return ctx.reply(prompt, Markup.inlineKeyboard([[Markup.button.callback('Отмена', 'cancel_stepper')]]));
+            }
         }
 
     if (!finalResponse || finalResponse.trim() === '') {

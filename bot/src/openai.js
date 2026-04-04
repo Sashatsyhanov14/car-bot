@@ -18,55 +18,56 @@ const openai = new OpenAI({
 module.exports = {
     async getChatResponse(cars, transfers, faqText, history, userMessage) {
         try {
-            // We use the data passed from index.js for better performance and consistency
-
-            // === АГЕНТ 1: АНАЛИТИК (Analyzer) ===
-            const analyzerMessages = [
-                { role: 'system', content: ANALYZER_PROMPT(cars || [], transfers || []) },
-                ...history,
-                { role: 'user', content: userMessage }
-            ];
-
+            // === АГЕНТ 1: АНАЛИТИК (Analyzer) — GPT-4o ===
             const analyzerResponse = await openai.chat.completions.create({
-                model: 'openai/gpt-4o-mini',
-                messages: analyzerMessages,
-                temperature: 0.1
+                model: 'openai/gpt-4o', // Upgraded to 4o per user request
+                messages: [
+                    { role: 'system', content: ANALYZER_PROMPT },
+                    ...history,
+                    { role: 'user', content: userMessage }
+                ],
+                temperature: 0.1,
+                response_format: { type: 'json_object' }
             });
 
-            const rawJsonStr = analyzerResponse.choices[0].message.content;
-            let analysis;
-            try {
-                const cleanJsonStr = rawJsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-                analysis = JSON.parse(cleanJsonStr);
-            } catch (e) {
-                analysis = { lang_code: 'ru', intent: 'consultation', service_type: null, item_id: null, writer_instruction: 'Ответь кратко на запрос.' };
-            }
+            const analysis = JSON.parse(analyzerResponse.choices[0].message.content);
 
-            // === АГЕНТ 2: ПИСАТЕЛЬ (Writer) — Всегда на RU ===
-            const writerMessages = [
-                { role: 'system', content: WRITER_PROMPT(cars || [], transfers || [], faqText) },
-                {
-                    role: 'user',
-                    content: `Инструкции от Аналитика:\nНамерение клиента: ${analysis.intent}\nЧто сказать клиенту:\n${analysis.writer_instruction}`
-                }
-            ];
+            // === АГЕНТ 2: ПОИСКОВИК (Searcher) — GPT-4o-mini ===
+            const searcherResponse = await openai.chat.completions.create({
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: SEARCHER_PROMPT(cars || [], transfers || [], faqText) },
+                    { role: 'user', content: `Analyzer Search Query: ${analysis.search_query}\nIntent: ${analysis.intent}` }
+                ],
+                temperature: 0.1,
+                response_format: { type: 'json_object' }
+            });
 
+            const searchResults = JSON.parse(searcherResponse.choices[0].message.content);
+
+            // === АГЕНТ 3: ПИСАТЕЛЬ (Writer) — GPT-4o-mini — Всегда на RU ===
             const writerResponseRaw = await openai.chat.completions.create({
                 model: 'openai/gpt-4o-mini',
-                messages: writerMessages,
+                messages: [
+                    { role: 'system', content: WRITER_PROMPT },
+                    {
+                        role: 'user',
+                        content: `Intent: ${analysis.intent}\nSearch Results: ${searchResults.results_summary}`
+                    }
+                ],
                 temperature: 0.7,
             });
 
             const russianMessage = writerResponseRaw.choices[0].message.content;
 
-            // === АГЕНТ 3: ПЕРЕВОДЧИК (Translator) ===
+            // === АГЕНТ 4: ПЕРЕВОДЧИК (Translator) — GPT-4o-mini ===
             let finalMessage = russianMessage;
             if (analysis.lang_code && analysis.lang_code !== 'ru') {
                 const translatorResponse = await openai.chat.completions.create({
                     model: 'openai/gpt-4o-mini',
                     messages: [
                         { role: 'system', content: LOCALIZER_PROMPT },
-                        { role: 'user', content: `Целевой язык: ${analysis.lang_code}\nТекст:\n${russianMessage}` }
+                        { role: 'user', content: `Target Language: ${analysis.lang_code}\nText:\n${russianMessage}` }
                     ],
                     temperature: 0.2
                 });
@@ -75,8 +76,8 @@ module.exports = {
 
             // Прикрепляем теги для парсера в index.js
             let embeddedTags = `[LANG:${analysis.lang_code || 'ru'}]`;
-            if (analysis.intent === 'sale' && analysis.item_id) {
-                embeddedTags += `\n[BOOK_REQUEST: ${analysis.service_type || 'car'}:${analysis.item_id}]`;
+            if (searchResults.match_id) {
+                embeddedTags += `\n[BOOK_REQUEST: ${searchResults.match_type || 'car'}:${searchResults.match_id}]`;
             }
 
             return finalMessage + '\n' + embeddedTags;
