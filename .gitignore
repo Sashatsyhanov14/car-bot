@@ -1,6 +1,9 @@
 node_modules/
 .env
+*.env
+.env.*
 .env.local
+*.sh
 .DS_Store
 dist/
 dist-ssr/
