@@ -103,6 +103,27 @@ export default function AdminCars() {
 
                 <textarea placeholder="Description" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
 
+                {/* Photo Preview Gallery */}
+                {formData.image_urls && formData.image_urls.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        {formData.image_urls.map((url: string, idx: number) => (
+                            <div key={idx} className="relative flex-shrink-0">
+                                <img src={url} className="w-20 h-20 rounded-xl object-cover border border-white/10" alt="" />
+                                <button 
+                                    onClick={() => setFormData({
+                                        ...formData, 
+                                        image_urls: formData.image_urls.filter((_: any, i: number) => i !== idx),
+                                        image_url: formData.image_url === url ? (formData.image_urls[idx+1] || formData.image_urls[idx-1] || '') : formData.image_url
+                                    })}
+                                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex gap-3">
                     {isEditing && <button onClick={() => { setIsEditing(null); setFormData({...EMPTY_CAR}); }} className="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase text-[10px]">Cancel</button>}
                     <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Save Car</button>

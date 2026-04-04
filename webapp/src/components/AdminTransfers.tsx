@@ -69,6 +69,12 @@ export default function AdminTransfers() {
                     <input type="number" placeholder="Price ($)" value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                 </div>
 
+                {formData.image_url && (
+                    <div className="flex justify-center">
+                        <img src={formData.image_url} className="w-32 h-32 rounded-2xl object-cover border border-white/10" alt="" />
+                    </div>
+                )}
+
                 <div className="flex gap-3">
                     {isEditing && <button onClick={() => { setIsEditing(null); setFormData({...EMPTY_TRANS}); }} className="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase text-[10px]">Cancel</button>}
                     <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl">Save Route</button>
