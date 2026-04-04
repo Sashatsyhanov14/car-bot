@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'car-bot',
+      name: 'bot3',
       script: 'npm',
       args: 'start',
       cwd: './bot',
