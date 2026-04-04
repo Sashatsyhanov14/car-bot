@@ -671,11 +671,7 @@ async function sendItemPhotos(telegramId, item) {
     }
 }
 
-// Запуск
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    bot.launch().then(() => console.log('Car Rental Bot with AI Multi-Agents is running...'));
-}
-
+// Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
