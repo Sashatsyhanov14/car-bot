@@ -257,9 +257,9 @@ async function handleWebAppData(ctx, dataStr) {
     try {
         let data;
         try {
-            data = JSON.parse(dataStr);
+            data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
         } catch (jsonErr) {
-            console.error(`[handleWebAppData] JSON Parse Error: ${jsonErr.message}`);
+            console.error(`[handleWebAppData] JSON Parse Error: ${jsonErr.message}. Data:`, dataStr);
             return;
         }
 
@@ -658,7 +658,14 @@ bot.on('text', async (ctx) => {
 
     } catch (err) {
         console.error('CRITICAL AI CHAT ERROR:', err);
-        try { await ctx.reply('Извините, произошла ошибка. Попробуйте позже.'); } catch (e) { }
+        try { 
+            const lang = userLangCache[telegramId] || 'ru';
+            const errMsgRu = 'Извините, произошла ошибка. Попробуйте позже.';
+            const errMsg = await getLocalizedText(lang, errMsgRu);
+            await ctx.reply(errMsg); 
+        } catch (e) { 
+            console.error('Final fallback error:', e.message);
+        }
     }
 });
 
