@@ -28,7 +28,7 @@ export default function AdminCars() {
     const [cars, setCars] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
+    const [_uploading, setUploading] = useState(false);
     const [formData, setFormData] = useState<any>({ ...EMPTY_CAR });
     const [confirmTarget, setConfirmTarget] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
