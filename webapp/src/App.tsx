@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import AdminStats from './components/AdminStats';
-import AdminCars from './components/AdminCars';
-import AdminTransfers from './components/AdminTransfers';
+import AdminFleet from './components/AdminFleet';
 import AdminFaq from './components/AdminFaq';
-import AdminRequests from './components/AdminRequests';
 import WithdrawModal from './components/WithdrawModal';
 import PublicCatalog from './components/PublicCatalog';
 
@@ -19,10 +17,8 @@ const translations: any = {
     adminTitle: "Панель Управления",
     adminSubtitle: "Глобальная статистика",
     tabReferral: "Моя Рефералка",
+    tabFleet: "Флот",
     tabStats: "Дашборд",
-    tabCars: "Авто",
-    tabTransfers: "Трансферы",
-    tabRequests: "Заявки",
     tabFaq: "FAQ",
     tabCatalog: "Каталог",
     loading: "Загрузка...",
@@ -69,10 +65,8 @@ const translations: any = {
     adminTitle: "Admin Panel",
     adminSubtitle: "Global Statistics",
     tabReferral: "My Referral",
+    tabFleet: "Fleet",
     tabStats: "Dashboard",
-    tabCars: "Cars",
-    tabTransfers: "Transfers",
-    tabRequests: "Requests",
     tabFaq: "FAQ",
     tabCatalog: "Catalog",
     loading: "Loading...",
@@ -183,7 +177,7 @@ const App: React.FC = () => {
   const [loginInputId, setLoginInputId] = useState('');
   const [lang, setLang] = useState<'ru' | 'en' | 'tr' | 'de' | 'pl' | 'ar' | 'fa'>('ru');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'cars' | 'transfers' | 'requests' | 'faq' | 'catalog'>('catalog');
+  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'fleet' | 'faq' | 'catalog'>('catalog');
   const [referralStats, setReferralStats] = useState({ invited: 0, requests: 0, earned: 0 });
   const [referralDetails, setReferralDetails] = useState<any[]>([]);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -475,9 +469,7 @@ if (loading) return (
           </div>
         );
       case 'stats': return <AdminStats t={t} />;
-      case 'cars': return <AdminCars />;
-      case 'transfers': return <AdminTransfers />;
-      case 'requests': return <AdminRequests t={t} />;
+      case 'fleet': return <AdminFleet />;
       case 'faq': return <AdminFaq t={t} />;
       case 'catalog': 
         return <PublicCatalog t={t} lang={lang} />;
@@ -574,31 +566,13 @@ if (loading) return (
               <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
             </button>
             <button
-              onClick={() => setActiveTab('cars')}
+              onClick={() => setActiveTab('fleet')}
               className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'cars' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
+                activeTab === 'fleet' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'cars' ? "'FILL' 1" : "'FILL' 0" }}>directions_car</span>
-              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabCars}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('transfers')}
-              className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'transfers' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'transfers' ? "'FILL' 1" : "'FILL' 0" }}>local_taxi</span>
-              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabTransfers}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('requests')}
-              className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'requests' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'requests' ? "'FILL' 1" : "'FILL' 0" }}>list_alt</span>
-              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabRequests}</span>
+              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'fleet' ? "'FILL' 1" : "'FILL' 0" }}>directions_car</span>
+              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabFleet}</span>
             </button>
             <button
               onClick={() => setActiveTab('faq')}

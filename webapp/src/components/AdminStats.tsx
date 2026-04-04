@@ -12,8 +12,20 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
     const [managerMsg, setManagerMsg] = useState('');
     const [loading, setLoading] = useState(true);
     const [payoutMsg, setPayoutMsg] = useState<{ [id: number]: string }>({});
+    const [requests, setRequests] = useState<any[]>([]);
+    const [reqLoading, setReqLoading] = useState(false);
 
-    useEffect(() => { fetchAll(); }, []);
+    useEffect(() => { 
+        fetchAll(); 
+        fetchRequests();
+        const channel = supabase.channel('requests-dashboard')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+                fetchRequests();
+                fetchStats();
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
     const fetchAll = async () => {
         setLoading(true);
@@ -73,7 +85,13 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
             const myInvitees = invitedUsers.filter((u: any) => u.referrer_id === ref.telegram_id);
             const myInviteeIds = myInvitees.map((u: any) => u.telegram_id);
             const myReqs = (allReqs || []).filter((r: any) => myInviteeIds.includes(r.user_id));
+            
             const revenue = myReqs.reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
+            const carRev = myReqs.filter((r: any) => r.service_type === 'car').reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
+            const transRev = myReqs.filter((r: any) => r.service_type === 'transfer').reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
+            
+            const conversion = myInvitees.length > 0 ? ((myReqs.length / myInvitees.length) * 100).toFixed(1) : '0';
+
             const myPayouts = (allPayouts || []).filter((p: any) => p.user_id === ref.telegram_id);
             const totalPaid = myPayouts.reduce((sum: number, p: any) => {
                 const match = p.content.match(/\$?([\d.]+)/);
@@ -85,12 +103,16 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                 username: ref.username,
                 balance: ref.balance || 0,
                 invitedCount: myInvitees.length,
+                invitees: myInvitees, // list of invited users
                 requestCount: myReqs.length,
                 revenue,
+                carRev,
+                transRev,
+                conversion,
                 totalPaid,
                 note: ref.note || '',
                 payouts: myPayouts,
-                requests: myReqs  // full request objects
+                requests: myReqs
             };
         });
 
@@ -143,6 +165,29 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
         fetchManagers();
     };
 
+    const fetchRequests = async () => {
+        setReqLoading(true);
+        const { data } = await supabase.from('requests').select('*, users(username)').order('created_at', { ascending: false }).limit(20);
+        setRequests(data || []);
+        setReqLoading(false);
+    };
+
+    const updateStatus = async (id: string, status: string) => {
+        await supabase.from('requests').update({ status }).eq('id', id);
+        fetchRequests();
+        fetchStats();
+    };
+
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'new': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+            case 'contacted': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+            case 'done': return 'bg-green-500/20 text-green-400 border-green-500/30';
+            case 'cancelled': return 'bg-red-500/20 text-red-400 border-red-500/30';
+            default: return 'bg-slate-500/20 text-slate-400';
+        }
+    };
+
     if (loading) return <div className="text-center py-20 opacity-50 animate-pulse">{t.analyzing || 'Анализ данных...'}</div>;
 
     return (
@@ -190,18 +235,19 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                         <span className="material-symbols-outlined text-primary text-[24px]">person</span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <p className="text-base font-black text-white truncate">@{ref.username}</p>
-                                            <span className="bg-white/5 text-[9px] font-mono text-slate-500 px-2 py-0.5 rounded-md border border-white/5">{ref.telegram_id}</span>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <p className="text-base font-black text-white truncate">
+                                                {ref.note || `@${ref.username}`}
+                                            </p>
+                                            {ref.note && <span className="text-[10px] text-slate-500 font-bold">(@{ref.username})</span>}
                                         </div>
-                                        {/* Premium Tag Input */}
-                                        <div className="relative group max-w-[200px]">
-                                            <div className="absolute inset-y-0 left-0 w-1 bg-primary rounded-full opacity-0 group-focus-within:opacity-100 transition-all blur-[2px]" />
-                                            <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-3 py-1.5 hover:bg-primary/10 transition-all">
-                                                <span className="material-symbols-outlined text-[14px] text-primary/60">label</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="bg-white/5 text-[9px] font-mono text-slate-500 px-2 py-0.5 rounded-md border border-white/5">{ref.telegram_id}</span>
+                                            <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                                                <span className="material-symbols-outlined text-[10px] text-primary">label</span>
                                                 <input 
-                                                    className="text-[11px] font-bold text-primary bg-transparent border-none outline-none w-full placeholder:text-primary/30"
-                                                    placeholder="Подпись партнёра..."
+                                                    className="text-[9px] font-bold text-primary bg-transparent border-none outline-none w-24 placeholder:text-primary/30"
+                                                    placeholder="Edit Tag..."
                                                     defaultValue={ref.note}
                                                     onBlur={(e) => handleUpdateNote(ref.telegram_id, e.target.value)}
                                                 />
@@ -215,20 +261,33 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                 </div>
 
                                 {/* Stats row */}
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-4 gap-2">
                                     {[
                                         { label: 'Привёл', value: ref.invitedCount, color: 'text-blue-400' },
                                         { label: 'Заявок', value: ref.requestCount, color: 'text-green-400' },
+                                        { label: 'Конверсия', value: `${ref.conversion}%`, color: 'text-purple-400' },
                                         { label: 'Выручка', value: `$${ref.revenue}`, color: 'text-primary' },
                                     ].map(s => (
                                         <div key={s.label} className="bg-black/20 p-2 rounded-xl text-center">
-                                            <p className={`text-base font-black ${s.color}`}>{s.value}</p>
-                                            <p className="text-[9px] text-slate-600 uppercase">{s.label}</p>
+                                            <p className={`text-sm font-black ${s.color}`}>{s.value}</p>
+                                            <p className="text-[8px] text-slate-600 uppercase font-bold">{s.label}</p>
                                         </div>
                                     ))}
                                 </div>
 
-                                {/* Payout button + history */}
+                                {/* Revenue Breakdown */}
+                                <div className="flex gap-2">
+                                    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
+                                        <span className="text-[9px] font-bold uppercase text-slate-500">Cars</span>
+                                        <span className="text-xs font-black text-blue-300">${ref.carRev}</span>
+                                    </div>
+                                    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
+                                        <span className="text-[9px] font-bold uppercase text-slate-500">Transfers</span>
+                                        <span className="text-xs font-black text-green-300">${ref.transRev}</span>
+                                    </div>
+                                </div>
+
+                                {/* Action row */}
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => handlePayout(ref)}
@@ -250,31 +309,49 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                     <p className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 p-2 rounded-xl">{payoutMsg[ref.telegram_id]}</p>
                                 )}
 
-                                {/* Bookings from this referral's invitees */}
-                                {ref.requests && ref.requests.length > 0 && (
-                                    <details className="text-[10px]">
-                                        <summary className="text-slate-400 cursor-pointer hover:text-slate-200 font-bold uppercase tracking-wider flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                                            Заявки ({ref.requests.length})
-                                        </summary>
-                                        <div className="mt-2 space-y-1.5 pl-2">
-                                            {ref.requests.map((r: any, i: number) => (
-                                                <div key={i} className="bg-black/30 p-2 rounded-xl flex items-center gap-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-slate-200 font-bold truncate">{r.excursion_title || '—'}</p>
-                                                        <p className="text-slate-500">{r.full_name || '—'} · {r.tour_date || '—'}</p>
+                                {/* Collapsible Details */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Bookings from this referral's invitees */}
+                                    {ref.requests && ref.requests.length > 0 && (
+                                        <details className="text-[10px]">
+                                            <summary className="text-slate-400 cursor-pointer hover:text-slate-200 font-bold uppercase tracking-wider flex items-center gap-1 outline-none">
+                                                <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+                                                Заявки ({ref.requests.length})
+                                            </summary>
+                                            <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                                {ref.requests.map((r: any, i: number) => (
+                                                    <div key={i} className="bg-black/30 p-2 rounded-xl flex items-center justify-between border border-white/5">
+                                                        <div className="min-w-0">
+                                                            <p className="text-slate-200 font-bold truncate">{r.excursion_title || '—'}</p>
+                                                            <p className="text-slate-500">{r.full_name || '—'} · {r.tour_date || '—'}</p>
+                                                        </div>
+                                                        <div className="text-right flex-shrink-0 ml-2">
+                                                            <p className="text-primary font-black">${r.price_rub || 0}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right flex-shrink-0">
-                                                        <p className="text-primary font-black">${r.price_rub || 0}</p>
-                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${r.status === 'accepted' ? 'bg-green-500/20 text-green-400' : r.status === 'new' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-slate-500'}`}>
-                                                            {r.status === 'accepted' ? 'принято' : r.status === 'new' ? 'новая' : r.status}
-                                                        </span>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    )}
+
+                                    {/* Invited Users List */}
+                                    {ref.invitees && ref.invitees.length > 0 && (
+                                        <details className="text-[10px]">
+                                            <summary className="text-slate-400 cursor-pointer hover:text-slate-200 font-bold uppercase tracking-wider flex items-center gap-1 outline-none">
+                                                <span className="material-symbols-outlined text-[14px]">group</span>
+                                                Приглашённые ({ref.invitees.length})
+                                            </summary>
+                                            <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                                {ref.invitees.map((u: any, i: number) => (
+                                                    <div key={i} className="bg-black/30 p-2 rounded-xl flex items-center justify-between border border-white/5">
+                                                        <p className="text-slate-300 font-bold truncate">@{u.username || 'user'}</p>
+                                                        <p className="text-[9px] text-slate-600 px-2">{new Date(u.created_at).toLocaleDateString()}</p>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </details>
-                                )}
+                                                ))}
+                                            </div>
+                                        </details>
+                                    )}
+                                </div>
 
                                 {/* Payout history */}
                                 {ref.payouts.length > 0 && (
@@ -292,6 +369,43 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                     </div>
                 </div>
             )}
+
+            {/* Dashboard / Recent Requests */}
+            <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                        <h3 className="text-sm font-bold text-slate-200">Последние заявки</h3>
+                    </div>
+                    <button onClick={fetchRequests} className="text-[10px] font-black text-primary uppercase tracking-widest">Обновить</button>
+                </div>
+                <div className="p-2 space-y-2">
+                    {reqLoading ? <div className="text-center py-4 opacity-50">...</div> : requests.length === 0 ? <p className="text-center py-4 text-xs text-slate-500">Заявок нет</p> : requests.map(req => (
+                        <div key={req.id} className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>
+                                            {req.status.toUpperCase()}
+                                        </span>
+                                        <span className="text-[9px] font-black text-primary/60 uppercase">{req.service_type}</span>
+                                    </div>
+                                    <h4 className="font-bold text-slate-100 text-sm">{req.excursion_title || 'Заявка'}</h4>
+                                </div>
+                                <p className="text-primary font-bold">${req.price_rub}</p>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px]">
+                                <p className="text-slate-400">@{req.users?.username || 'user'}</p>
+                                <p className="text-slate-500">{new Date(req.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="flex gap-2 pt-2 border-t border-white/5">
+                                <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-2 text-[9px] font-black bg-yellow-500/10 text-yellow-500 rounded-lg uppercase">Связался</button>
+                                <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-2 text-[9px] font-black bg-green-500/10 text-green-500 rounded-lg uppercase">Готово</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             {/* Manager Management */}
             <div className="bg-[#1a1a1d] p-5 rounded-3xl border border-white/5 space-y-4">
