@@ -13,7 +13,7 @@ const MANAGER_ID = parseInt(process.env.MANAGER_ID);
 const userLangCache = {};
 const userQrBtnCache = {}; // cached translated QR button text per user
 const lastShownItem = {}; // telegramId → itemId of last shown item
-const userStates = new Map(); // { telegramId: { step: 'name'|'date'|'hotel', excursionId, data: {} } }
+const userStates = new Map(); // { telegramId: { step: 'name'|'date'|'hotel', itemId, serviceType, data: {} } }
 
 // QR button keywords for detection in any language
 const QR_KEYWORDS = ['qr', 'промокод', 'promo', 'refer', 'реферал', 'benim qr', 'qrcode'];
@@ -130,13 +130,18 @@ bot.action(/^bonus_req_(.+)$/, async (ctx) => {
 
 bot.action(/^start_chat_book_(.+)$/, async (ctx) => {
     const telegramId = ctx.from.id;
-    const excursionId = ctx.match[1];
-    const { data: excursions } = await getExcursions();
-    const selectedEx = excursions ? excursions.find(e => e.id === excursionId) : null;
+    const itemId = ctx.match[1];
     
-    if (!selectedEx) return ctx.answerCbQuery('Услуга не найдена.', { show_alert: true });
+    const { data: cars } = await getCars();
+    const { data: transfers } = await getTransfers();
+    const items = [...(cars || []), ...(transfers || [])];
+    const selected = items.find(i => i.id === itemId);
+    
+    if (!selected) return ctx.answerCbQuery('Услуга не найдена.', { show_alert: true });
 
-    userStates.set(telegramId, { step: 'name', excursionId, data: {} });
+    const serviceType = selected.brand ? 'car' : 'transfer';
+    userStates.set(telegramId, { step: 'name', itemId, serviceType, data: {} });
+    
     const lang = userLangCache[telegramId] || 'ru';
     const namePromptRu = `Оформим бронь! Как к вам можно обращаться? Напишите, пожалуйста, ваше ФИО.`;
     const namePrompt = await getLocalizedText(lang, namePromptRu);
@@ -317,72 +322,7 @@ async function handleWebAppData(ctx, dataStr) {
             return ctx.reply(successMsg, { parse_mode: 'Markdown' });
         }
 
-        // --- AI Auto Translate Excursion ---
-        if (data.type === 'auto_translate_excursion') {
-            const { excursionId, data: exData } = data;
-            const languages = ['en', 'tr', 'de', 'pl', 'ar', 'fa'];
-            const fields = ['title', 'city', 'description', 'duration', 'included', 'meeting_point'];
-            const updates = {};
-
-            for (const targetLang of languages) {
-                for (const field of fields) {
-                    const sourceText = exData[field];
-                    if (sourceText) {
-                        console.log(`[AI_TRANSLATE] Translating ${field} to ${targetLang}...`);
-                        const translated = await getLocalizedText(targetLang, sourceText);
-                        if (translated && translated !== sourceText) {
-                            updates[`${field}_${targetLang}`] = translated;
-                        }
-                    }
-                }
-            }
-
-            if (Object.keys(updates).length > 0 && excursionId !== 'new') {
-                const { error } = await supabase.from('excursions').update(updates).eq('id', excursionId);
-                if (error) {
-                    console.error('[AI_TRANSLATE] Update error:', error.message);
-                    return ctx.reply(`Ошибка сохранения перевода: ${error.message}`);
-                }
-                else console.log(`[AI_TRANSLATE] Updated excursion ${excursionId} success! (Fields: ${Object.keys(updates).length})`);
-            }
-
-            const confirmMsg = `AI Перевод завершен. Я подготовил описание на всех языках: English, Turkish, German, Polish, Arabic, Persian. Обновите страницу в Mini App, чтобы увидеть результат.`;
-            return ctx.reply(confirmMsg, { parse_mode: 'Markdown' });
-        }
-
-        // --- Bulk Translate All ---
-        if (data.type === 'bulk_translate_all') {
-            const { data: excursions } = await supabase.from('excursions').select('*');
-            if (!excursions || excursions.length === 0) return ctx.reply('Элементы не найдены.');
-
-            ctx.reply(`Начинаю массовый перевод всего каталога (${excursions.length} шт.). Это может занять время, я сообщу о результате.`, { parse_mode: 'Markdown' });
-
-            const targetLangs = ['en', 'tr', 'de', 'pl', 'ar', 'fa'];
-            const fields = ['title', 'city', 'description', 'duration', 'included', 'meeting_point'];
-            let updatedCount = 0;
-
-            for (const ex of excursions) {
-                const updates = {};
-                for (const lang of targetLangs) {
-                    for (const field of fields) {
-                        const targetKey = `${field}_${lang}`;
-                        if (!ex[targetKey] && ex[field]) {
-                            const translated = await getLocalizedText(lang, ex[field]);
-                            if (translated && translated !== ex[field]) {
-                                updates[targetKey] = translated;
-                            }
-                        }
-                    }
-                }
-
-                if (Object.keys(updates).length > 0) {
-                    const { error } = await supabase.from('excursions').update(updates).eq('id', ex.id);
-                    if (!error) updatedCount++;
-                }
-            }
-
-            return ctx.reply(`Массовый перевод завершен. Обновлено элементов: ${updatedCount} из ${excursions.length}. Все языки теперь заполнены.`, { parse_mode: 'Markdown' });
-        }
+        // --- DEAD CODE REMOVED (Excursion Translation) ---
 
         // --- Withdraw Request ---
         if (data.type === 'withdraw_request') {
@@ -454,52 +394,37 @@ bot.on('text', async (ctx) => {
         const lang = userLangCache[telegramId] || 'ru';
         try { await ctx.sendChatAction('upload_photo'); } catch (e) {}
 
-        // Find last mentioned excursion from cache or recent history
-        const { data: excursions } = await getExcursions();
-        let foundEx = null;
+        // Find last mentioned item from cache or recent history
+        const { data: cars } = await getCars();
+        const { data: transfers } = await getTransfers();
+        const items = [...(cars || []), ...(transfers || [])];
+        let foundItem = null;
 
-        // Check cache first (last excursion shown to this user)
-        const cachedId = lastShownExcursion[telegramId];
-        if (cachedId && excursions) {
-            foundEx = excursions.find(e => e.id === cachedId);
+        // Check cache first (last item shown to this user)
+        const cachedId = lastShownItem[telegramId];
+        if (cachedId && items.length > 0) {
+            foundItem = items.find(i => i.id === cachedId);
         }
 
-        // Fallback: scan last bot messages for excursion title
-        if (!foundEx && excursions) {
+        // Fallback: scan last bot messages for names
+        if (!foundItem && items.length > 0) {
             const { data: history } = await getHistory(telegramId);
             const botMessages = (history || []).filter(m => m.role === 'assistant').slice(-5);
-            for (const ex of excursions) {
-                if (botMessages.some(m => m.content?.toLowerCase().includes(ex.title.toLowerCase()))) {
-                    foundEx = ex;
+            for (const item of items) {
+                const searchStr = item.brand ? `${item.brand} ${item.model}` : `${item.from_location} ${item.to_location}`;
+                if (botMessages.some(m => m.content?.toLowerCase().includes(searchStr.toLowerCase()))) {
+                    foundItem = item;
                     break;
                 }
             }
         }
 
-        if (foundEx) {
-            const photos = (foundEx.image_urls && Array.isArray(foundEx.image_urls) && foundEx.image_urls.length > 0)
-                ? foundEx.image_urls
-                : (foundEx.image_url ? [foundEx.image_url] : []);
-
-            if (photos.length > 0) {
-                try {
-                    if (photos.length === 1) {
-                        await bot.telegram.sendPhoto(telegramId, photos[0]);
-                    } else {
-                        await bot.telegram.sendMediaGroup(telegramId, photos.slice(0, 10).map(url => ({ type: 'photo', media: url })));
-                    }
-                    const replyRu = `Фотографии по вашему запросу («${foundEx.title}»).`;
-                    const reply = await getLocalizedText(lang, replyRu);
-                    await ctx.reply(reply);
-                } catch (e) {
-                    console.warn('[PhotoRequest] send error:', e.message);
-                    const errRu = `К сожалению, не удалось загрузить фото. Попробуйте позже.`;
-                    await ctx.reply(await getLocalizedText(lang, errRu));
-                }
-            } else {
-                const noPhotoRu = `У «${foundEx.title}» пока нет добавочных фотографий. Хотите узнать подробности или забронировать?`;
-                await ctx.reply(await getLocalizedText(lang, noPhotoRu));
-            }
+        if (foundItem) {
+            await sendItemPhotos(telegramId, foundItem);
+            const title = foundItem.brand ? `${foundItem.brand} ${foundItem.model}` : `${foundItem.from_location} → ${foundItem.to_location}`;
+            const replyRu = `Фотографии по вашему запросу («${title}»).`;
+            const reply = await getLocalizedText(lang, replyRu);
+            await ctx.reply(reply);
         } else {
             const notFoundRu = `Напишите, что именно вас интересует — и я покажу фото.`;
             await ctx.reply(await getLocalizedText(lang, notFoundRu));
