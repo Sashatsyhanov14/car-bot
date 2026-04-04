@@ -1,10 +1,11 @@
 const { Telegraf, session, Markup } = require('telegraf');
 const dotenv = require('dotenv');
+const path = require('path');
 const crypto = require('crypto');
 const { supabase, getUser, createUser, getCars, getTransfers, saveMessage, getHistory, createRequest, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText } = require('./src/openai');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, './.env') });
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const MANAGER_ID = parseInt(process.env.MANAGER_ID);
@@ -656,11 +657,15 @@ bot.on('text', async (ctx) => {
         await ctx.reply(finalResponse);
     }
 
-    } catch (err) {
-        console.error('CRITICAL AI CHAT ERROR:', err);
+    } catch (error) {
+        console.error('[OpenAI Fatal Error]:', error.message);
+        if (error.response) {
+            console.error('[OpenAI Status]:', error.response.status);
+            console.error('[OpenAI Data]:', error.response.data);
+        }
         try { 
             const lang = userLangCache[telegramId] || 'ru';
-            const errMsgRu = 'Извините, произошла ошибка. Попробуйте позже.';
+            const errMsgRu = 'Извините, произошла ошибка. Попробуйте чуть позже.';
             const errMsg = await getLocalizedText(lang, errMsgRu);
             await ctx.reply(errMsg); 
         } catch (e) { 

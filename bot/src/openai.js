@@ -3,11 +3,12 @@ const dotenv = require('dotenv');
 const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
 const { getCars, getTransfers } = require('./supabase');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+    apiKey: (process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '').trim(),
     defaultHeaders: {
         'HTTP-Referer': 'https://car-rental-bot.com',
         'X-Title': 'Car Rental & Transfer Bot',
@@ -81,8 +82,12 @@ module.exports = {
             return finalMessage + '\n' + embeddedTags;
 
         } catch (error) {
-            console.error('[OpenAI Error]:', error);
-            return 'Извините, произошла ошибка. Пожалуйста, попробуйте позже.';
+            console.error('[OpenAI Fatal Error]:', error.message);
+            if (error.response) {
+                console.error('[OpenAI Status]:', error.response.status);
+                console.error('[OpenAI Data]:', error.response.data);
+            }
+            return 'Извините, произошла ошибка. Пожалуйста, попробуйте чуть позже.';
         }
     },
 
