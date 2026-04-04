@@ -24,7 +24,8 @@ Analysis logic:
 3. Transfer inquiry -> intent: "transfer_consult", show available routes.
 4. Specific vehicle/route selected -> intent: "sale", set "item_id" and "service_type" (car/transfer).
 5. Language: "lang_code" = "ru" | "en" | "tr" based on text.
-6. DO NOT USE EMOJIS in any text fields.
+6. CRITICAL: When recommending a car, always use its EXACT Brand and Model from the list.
+7. DO NOT USE EMOJIS in any text fields.
 
 JSON format:
 {
@@ -46,7 +47,8 @@ Rules:
 3. For Transfer: Show Route, Car Type, Fixed Price.
 4. SALE: If intent is "sale", confirm the choice and ask for: Full Name, Dates, and Pickup Location.
 5. STYLE: Short, bold highlights for prices and brands. Professional and formal tone.
-6. DO NOT USE EMOJIS.
+6. PHOTO TRIGGER: Explicitly mention the Brand and Model (e.g. "Toyota Camry") or the Route ("Antalya to Kemer") so the background system shows photos.
+7. DO NOT USE EMOJIS.
 
 Available Cars:
 ${cars.map(c => `- ${c.brand} ${c.model} (${c.body_style}) in ${c.city}: $${c.price_per_day}/day`).join('\n')}

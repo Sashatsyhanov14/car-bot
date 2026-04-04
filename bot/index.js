@@ -657,14 +657,15 @@ bot.on('text', async (ctx) => {
         await saveMessage(telegramId, 'user', userText);
 
         const { data: history } = await getHistory(telegramId);
-        const { data: excursions } = await getExcursions();
+        const { data: cars } = await getCars();
+        const { data: transfers } = await getTransfers();
         const { data: faqRows } = await getFaq();
 
         const faqText = faqRows ? faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') : '';
 
         try { await ctx.sendChatAction('typing'); } catch (e) { }
 
-        const aiResponse = await getChatResponse(excursions, faqText, history, userText);
+        const aiResponse = await getChatResponse(cars, transfers, faqText, history, userText);
 
         const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);
         if (langMatch) userLangCache[telegramId] = langMatch[1].toLowerCase();
@@ -691,13 +692,24 @@ bot.on('text', async (ctx) => {
         finalResponse = 'Извините, я задумался. Повторите, пожалуйста, ваш вопрос.';
     }
 
-    // Mentioned excursion check (to show photos even if not booking)
-    if (excursions) {
-        const cleanText = finalResponse.toLowerCase();
-        const mentionedEx = excursions.find(ex => cleanText.includes(ex.title.toLowerCase()));
-        if (mentionedEx) {
-            lastShownItem[telegramId] = mentionedEx.id;
-            await sendExcursionPhotos(telegramId, mentionedEx);
+    // Mentioned item check (to show photos even if not booking)
+    const cleanText = finalResponse.toLowerCase();
+    const mentionedCar = (cars || []).find(c => 
+        (c.brand && cleanText.includes(c.brand.toLowerCase())) || 
+        (c.model && cleanText.includes(c.model.toLowerCase()))
+    );
+    
+    if (mentionedCar) {
+        lastShownItem[telegramId] = mentionedCar.id;
+        await sendItemPhotos(telegramId, mentionedCar);
+    } else {
+        const mentionedTrans = (transfers || []).find(t => 
+            cleanText.includes(t.from_location.toLowerCase()) && 
+            cleanText.includes(t.to_location.toLowerCase())
+        );
+        if (mentionedTrans) {
+            lastShownItem[telegramId] = mentionedTrans.id;
+            await sendItemPhotos(telegramId, mentionedTrans);
         }
     }
 
@@ -714,11 +726,11 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// Helper: send all photos of an excursion as album
-async function sendExcursionPhotos(telegramId, ex) {
-    const photos = (ex.image_urls && Array.isArray(ex.image_urls))
-        ? ex.image_urls.filter(url => url && url.startsWith('http'))
-        : (ex.image_url ? [ex.image_url] : []);
+// Helper: send all photos of an item as album
+async function sendItemPhotos(telegramId, item) {
+    const photos = (item.image_urls && Array.isArray(item.image_urls))
+        ? item.image_urls.filter(url => url && url.startsWith('http'))
+        : (item.image_url ? [item.image_url] : []);
 
     if (photos.length === 0) return;
 

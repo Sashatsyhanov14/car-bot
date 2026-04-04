@@ -1,6 +1,7 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
 const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
+const { getCars, getTransfers } = require('./supabase');
 
 dotenv.config();
 
@@ -14,10 +15,9 @@ const openai = new OpenAI({
 });
 
 module.exports = {
-    async getChatResponse(faqText, history, userMessage) {
+    async getChatResponse(cars, transfers, faqText, history, userMessage) {
         try {
-            const { data: cars } = await getCars();
-            const { data: transfers } = await getTransfers();
+            // We use the data passed from index.js for better performance and consistency
 
             // === АГЕНТ 1: АНАЛИТИК (Analyzer) ===
             const analyzerMessages = [
