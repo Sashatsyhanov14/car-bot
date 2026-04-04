@@ -4,6 +4,7 @@ node_modules/
 .env.*
 .env.local
 *.sh
+!migrate_env.sh
 .DS_Store
 dist/
 dist-ssr/
