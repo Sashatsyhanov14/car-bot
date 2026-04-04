@@ -49,9 +49,9 @@ export default function AdminCars() {
             for (const file of Array.from(files)) {
                 const ext = file.name.split('.').pop();
                 const fileName = `car_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                const { error } = await supabase.storage.from('excursion_photos').upload(fileName, file);
+                const { error } = await supabase.storage.from('car_photos').upload(fileName, file);
                 if (error) throw error;
-                const { data: urlData } = supabase.storage.from('excursion_photos').getPublicUrl(fileName);
+                const { data: urlData } = supabase.storage.from('car_photos').getPublicUrl(fileName);
                 newUrls.push(urlData.publicUrl);
             }
             setFormData((prev: any) => ({
