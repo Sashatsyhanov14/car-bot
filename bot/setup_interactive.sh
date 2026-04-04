@@ -4,14 +4,22 @@
 echo "--- Car Bot Environment Setup ---"
 echo "Please enter the following values one by one:"
 
-read -p "1. BOT_TOKEN: " BOT_TOKEN
-read -p "2. OPENAI_API_KEY: " OPENAI_API_KEY
-read -p "3. SUPABASE_URL: " SUPABASE_URL
-read -p "4. SUPABASE_SERVICE_ROLE_KEY: " SUPABASE_SERVICE_ROLE_KEY
-read -p "5. SUPABASE_ANON_KEY: " SUPABASE_ANON_KEY
-read -p "6. WEBAPP_URL (e.g. https://tour.ticaretai.tr): " WEBAPP_URL
-read -p "7. WEBHOOK_URL (same as above): " WEBHOOK_URL
-read -p "8. PORT (press Enter for 3003): " PORT
+echo "1. BOT_TOKEN:"
+read BOT_TOKEN
+echo "2. OPENAI_API_KEY:"
+read OPENAI_API_KEY
+echo "3. SUPABASE_URL:"
+read SUPABASE_URL
+echo "4. SUPABASE_SERVICE_ROLE_KEY:"
+read SUPABASE_SERVICE_ROLE_KEY
+echo "5. SUPABASE_ANON_KEY:"
+read SUPABASE_ANON_KEY
+echo "6. WEBAPP_URL (например https://tour.ticaretai.tr):"
+read WEBAPP_URL
+echo "7. WEBHOOK_URL (то же самое):"
+read WEBHOOK_URL
+echo "8. PORT (нажми Enter для 3003):"
+read PORT
 PORT=${PORT:-3003}
 
 cat <<EOF > bot/.env
