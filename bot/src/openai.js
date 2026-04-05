@@ -67,7 +67,7 @@ module.exports = {
                     { role: 'system', content: WRITER_PROMPT },
                     {
                         role: 'user',
-                        content: `Intent: ${analysis.intent}\nSearch Results: ${searchResults.results_summary}`
+                        content: `Intent: ${analysis.intent}\nSearch Results: ${searchResults.results_summary}\n\nSTRICT RULE: NO GREETINGS, NO SIGNATURES, START DIRECTLY WITH THE ANSWER.`
                     }
                 ],
                 temperature: 0.7,

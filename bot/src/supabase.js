@@ -41,20 +41,19 @@ module.exports = {
   },
 
   async getCars() {
+    // Temporarily removing is_active filter to debug the "0 cars" issue
     const { data, error } = await supabase
       .from('cars')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_number', { ascending: true });
+      .select('*');
+    if (data) console.log(`[DB_CHECK] Total Cars found: ${data.length}`);
     return { data, error };
   },
 
   async getTransfers() {
     const { data, error } = await supabase
       .from('transfers')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_number', { ascending: true });
+      .select('*');
+    if (data) console.log(`[DB_CHECK] Total Transfers found: ${data.length}`);
     return { data, error };
   },
 
