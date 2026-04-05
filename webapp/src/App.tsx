@@ -400,7 +400,7 @@ const App: React.FC = () => {
   const [loginInputId, setLoginInputId] = useState('');
   const [lang, setLang] = useState<'ru' | 'en' | 'tr' | 'de' | 'pl' | 'ar' | 'fa'>('ru');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'fleet' | 'faq' | 'catalog' | 'excursions' | 'requests'>('referral');
+  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'fleet' | 'faq' | 'catalog' | 'excursions' | 'requests'>('catalog');
   const [referralStats, setReferralStats] = useState({ invited: 0, requests: 0, earned: 0 });
   const [referralDetails, setReferralDetails] = useState<any[]>([]);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -441,7 +441,7 @@ const App: React.FC = () => {
       if (currentUser) {
         setUser(currentUser);
         if (currentUser.role === 'founder' || currentUser.role === 'manager') {
-          setActiveTab('stats');
+          setActiveTab('catalog');
         }
         // Fetch invited users with their request counts
         const { data: invitedUsers } = await supabase
