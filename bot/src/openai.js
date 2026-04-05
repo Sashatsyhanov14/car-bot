@@ -17,6 +17,7 @@ const openai = new OpenAI({
 
 module.exports = {
     async getChatResponse(cars, transfers, faqText, history, userMessage) {
+        console.log(`[AI_INPUT] From User: "${userMessage}" | Inventory: Cars(${cars?.length || 0}), Transfers(${transfers?.length || 0})`);
         try {
             // === АГЕНТ 1: АНАЛИТИК (Analyzer) — GPT-4o-mini ===
             const analyzerResponse = await openai.chat.completions.create({
@@ -33,6 +34,7 @@ module.exports = {
             let analysis;
             try {
                 analysis = JSON.parse(analyzerResponse.choices[0].message.content);
+                console.log(`[ANALYZER_OUT] Intent: ${analysis.intent} | Search: "${analysis.search_query}"`);
             } catch (e) {
                 console.error('[Analyzer JSON Error]:', e.message);
                 analysis = { lang_code: 'ru', intent: 'consultation', search_query: userMessage };
@@ -52,6 +54,7 @@ module.exports = {
             let searchResults;
             try {
                 searchResults = JSON.parse(searcherResponse.choices[0].message.content);
+                console.log(`[SEARCHER_OUT] Match: ${searchResults.match_type}:${searchResults.match_id} | Summary: ${searchResults.results_summary?.substring(0, 50)}...`);
             } catch (e) {
                 console.error('[Searcher JSON Error]:', e.message);
                 searchResults = { match_id: null, match_type: null, results_summary: 'Нет подходящих вариантов.' };
