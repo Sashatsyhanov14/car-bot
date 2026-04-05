@@ -147,6 +147,11 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                     </div>
                 )) : transfers.map(t_item => (
                     <div key={t_item.id} onClick={() => setSelectedItem(t_item)} className="bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all cursor-pointer">
+                        {t_item.image_url && (
+                             <div className="relative aspect-[16/8]">
+                                 <img src={t_item.image_url} className="w-full h-full object-cover" alt="" />
+                             </div>
+                        )}
                         <div className="p-6 space-y-4">
                             <div className="flex items-center gap-3">
                                 <div className="flex-1 text-center">

@@ -69,6 +69,13 @@ export default function AdminTransfers() {
                     <input type="number" placeholder="Price ($)" value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                 </div>
 
+                <textarea 
+                    placeholder="Route Description (Optional)" 
+                    value={formData.description} 
+                    onChange={e => setFormData({...formData, description: e.target.value})} 
+                    className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm min-h-[80px]"
+                />
+
                 {formData.image_url && (
                     <div className="flex justify-center">
                         <img src={formData.image_url} className="w-32 h-32 rounded-2xl object-cover border border-white/10" alt="" />
