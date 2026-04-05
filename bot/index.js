@@ -206,7 +206,11 @@ bot.start(async (ctx) => {
         userLangCache[telegramId] = lang;
 
         if (user && !user.language_code) {
-            await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId).catch(() => {});
+            try {
+                await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId);
+            } catch (err) {
+                console.error('[DATABASE_UPDATE_ERROR] Start language:', err.message);
+            }
         }
 
         const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим? Напишите город или просто спросите, что у нас есть.`;
@@ -609,7 +613,11 @@ bot.on('text', async (ctx) => {
             const newLang = langMatch[1].toLowerCase();
             if (userLangCache[telegramId] !== newLang) {
                 userLangCache[telegramId] = newLang;
-                await supabase.from('users').update({ language_code: newLang }).eq('telegram_id', telegramId).catch(() => {});
+                try {
+                    await supabase.from('users').update({ language_code: newLang }).eq('telegram_id', telegramId);
+                } catch (err) {
+                    console.error('[DATABASE_UPDATE_ERROR] Message language:', err.message);
+                }
             }
         }
 

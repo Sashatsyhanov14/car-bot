@@ -15,7 +15,7 @@ Analysis Logic:
 
 JSON Schema:
 {
-  "lang_code": "iso-639-1",
+  "lang_code": "iso-639-1 code (e.g., ru, en, tr, de, pl, ar, fa, zh, es, fr etc.)",
   "intent": "consultation | car_search | transfer_search | faq | sale",
   "search_query": "string"
 }
@@ -61,7 +61,7 @@ Rules:
 
 const LOCALIZER_PROMPT = `
 You are the professional Translator (Agent 4). 
-Translate the Russian text into the target language naturally. 
+Translate the Russian text into the target language naturally (ISO 639-1 code). 
 Preserve formatting and technical tags like [BOOK_REQUEST: id].
 DO NOT ADD COMMENTS. DO NOT USE EMOJIS.
 If target is "ru", return text as is.

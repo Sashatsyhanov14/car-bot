@@ -1,6 +1,6 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
+const { ANALYZER_PROMPT, SEARCHER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
 const { getCars, getTransfers } = require('./supabase');
 
 const path = require('path');
@@ -18,9 +18,9 @@ const openai = new OpenAI({
 module.exports = {
     async getChatResponse(cars, transfers, faqText, history, userMessage) {
         try {
-            // === АГЕНТ 1: АНАЛИТИК (Analyzer) — GPT-4o ===
+            // === АГЕНТ 1: АНАЛИТИК (Analyzer) — GPT-4o-mini ===
             const analyzerResponse = await openai.chat.completions.create({
-                model: 'openai/gpt-4o', // Upgraded to 4o per user request
+                model: 'openai/gpt-4o-mini', // Reverted to mini for reliability
                 messages: [
                     { role: 'system', content: ANALYZER_PROMPT },
                     ...history,
@@ -30,7 +30,13 @@ module.exports = {
                 response_format: { type: 'json_object' }
             });
 
-            const analysis = JSON.parse(analyzerResponse.choices[0].message.content);
+            let analysis;
+            try {
+                analysis = JSON.parse(analyzerResponse.choices[0].message.content);
+            } catch (e) {
+                console.error('[Analyzer JSON Error]:', e.message);
+                analysis = { lang_code: 'ru', intent: 'consultation', search_query: userMessage };
+            }
 
             // === АГЕНТ 2: ПОИСКОВИК (Searcher) — GPT-4o-mini ===
             const searcherResponse = await openai.chat.completions.create({
@@ -43,7 +49,13 @@ module.exports = {
                 response_format: { type: 'json_object' }
             });
 
-            const searchResults = JSON.parse(searcherResponse.choices[0].message.content);
+            let searchResults;
+            try {
+                searchResults = JSON.parse(searcherResponse.choices[0].message.content);
+            } catch (e) {
+                console.error('[Searcher JSON Error]:', e.message);
+                searchResults = { match_id: null, match_type: null, results_summary: 'Нет подходящих вариантов.' };
+            }
 
             // === АГЕНТ 3: ПИСАТЕЛЬ (Writer) — GPT-4o-mini — Всегда на RU ===
             const writerResponseRaw = await openai.chat.completions.create({
@@ -132,13 +144,14 @@ ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: 
                 model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: LOCALIZER_PROMPT },
-                    { role: 'user', content: `Целевой язык: ${langCode}\nТекст:\n${russianText}` }
+                    { role: 'user', content: `Target Language: ${langCode}\nText:\n${russianText}` }
                 ],
                 temperature: 0.2,
             });
             return response.choices[0].message.content.trim();
         } catch (e) {
-            return russianText;
+            console.error('[getLocalizedText Error]:', e.message);
+            return russianText; // Fallback to Russian instead of throwing
         }
     }
 };
