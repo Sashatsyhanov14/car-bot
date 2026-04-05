@@ -48,6 +48,9 @@ app.post('/api/send-qr', async (req, res) => {
 
 // Any other request serves the React app
 app.get('*', (req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.sendFile(path.join(webappDistPath, 'index.html'));
 });
 
