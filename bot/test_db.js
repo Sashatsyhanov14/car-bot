@@ -18,23 +18,24 @@ async function checkDatabase() {
     console.log('--- DATABASE INSPECTION ---');
     
     // Check Cars
+    console.log('\n--- Checking Cars ---');
     const { data: cars, error: carErr } = await supabase.from('cars').select('*');
-    if (carErr) console.error('Cars Error:', carErr.message);
-    else {
-        console.log(`Total Cars in DB: ${cars.length}`);
-        const activeCount = cars.filter(c => c.is_active === true).length;
-        console.log(`Active Cars (is_active=true): ${activeCount}`);
-        if (cars.length > 0) console.log('First Car:', cars[0].brand, cars[0].model, 'Active:', cars[0].is_active);
-    }
+    if (carErr) console.log('❌ Таблица cars НЕ доступна (Table API)');
+    else console.log(`✅ Таблица cars доступна (Table API). Найдено: ${cars.length}`);
+
+    const { data: carsRpc, error: rpcErr } = await supabase.rpc('get_all_cars');
+    if (rpcErr) console.log('❌ Функция get_all_cars НЕ доступна (RPC API)');
+    else console.log(`✅ Функция get_all_cars доступна (RPC API). Найдено: ${carsRpc.length}`);
 
     // Check Transfers
+    console.log('\n--- Checking Transfers ---');
     const { data: transfers, error: transErr } = await supabase.from('transfers').select('*');
-    if (transErr) console.error('Transfers Error:', transErr.message);
-    else {
-        console.log(`Total Transfers in DB: ${transfers.length}`);
-        const activeCount = transfers.filter(t => t.is_active === true).length;
-        console.log(`Active Transfers: ${activeCount}`);
-    }
+    if (transErr) console.log('❌ Таблица transfers НЕ доступна (Table API)');
+    else console.log(`✅ Таблица transfers доступна (Table API). Найдено: ${transfers.length}`);
+
+    const { data: transRpc, error: rpcTransErr } = await supabase.rpc('get_all_transfers');
+    if (rpcTransErr) console.log('❌ Функция get_all_transfers НЕ доступна (RPC API)');
+    else console.log(`✅ Функция get_all_transfers доступна (RPC API). Найдено: ${transRpc.length}`);
 
     // Check FAQ
     const { data: faq, error: faqErr } = await supabase.from('faq').select('*');

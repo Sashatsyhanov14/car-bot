@@ -41,19 +41,38 @@ module.exports = {
   },
 
   async getCars() {
-    // Temporarily removing is_active filter to debug the "0 cars" issue
-    const { data, error } = await supabase
-      .from('cars')
-      .select('*');
-    if (data) console.log(`[DB_CHECK] Total Cars found: ${data.length}`);
+    let { data, error } = await supabase.from('cars').select('*');
+    if (error || !data || data.length === 0) {
+      console.log('[DB] Table "cars" search failed/empty, trying RPC...');
+      const rpc = await supabase.rpc('get_all_cars');
+      if (!rpc.error && rpc.data) {
+        data = rpc.data;
+        error = null;
+        console.log(`[DB] RPC Success: Found ${data.length} cars`);
+      } else if (rpc.error) {
+        console.error('[DB] RPC Error:', rpc.error.message);
+      }
+    } else {
+      console.log(`[DB] Table Success: Found ${data.length} cars`);
+    }
     return { data, error };
   },
 
   async getTransfers() {
-    const { data, error } = await supabase
-      .from('transfers')
-      .select('*');
-    if (data) console.log(`[DB_CHECK] Total Transfers found: ${data.length}`);
+    let { data, error } = await supabase.from('transfers').select('*');
+    if (error || !data || data.length === 0) {
+      console.log('[DB] Table "transfers" search failed/empty, trying RPC...');
+      const rpc = await supabase.rpc('get_all_transfers');
+      if (!rpc.error && rpc.data) {
+        data = rpc.data;
+        error = null;
+        console.log(`[DB] RPC Success: Found ${data.length} transfers`);
+      } else if (rpc.error) {
+        console.error('[DB] RPC Error:', rpc.error.message);
+      }
+    } else {
+      console.log(`[DB] Table Success: Found ${data.length} transfers`);
+    }
     return { data, error };
   },
 
