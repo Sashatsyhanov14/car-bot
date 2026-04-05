@@ -156,22 +156,33 @@ const AdminFleet: React.FC<{ t: any }> = ({ t }) => {
                             )}
                         </>
                     ) : (
-                        <>
-                            <div className="grid grid-cols-2 gap-3">
-                                <input placeholder={t.fromLocation} value={formData.from_location} onChange={e => setFormData({...formData, from_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                                <input placeholder={t.toLocation} value={formData.to_location} onChange={e => setFormData({...formData, to_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                            </div>
-                            <input type="number" placeholder={t.price} value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
-                            
-                            {formData.image_url && (
-                                <div className="flex justify-center">
-                                    <div className="relative">
-                                        <img src={formData.image_url} className="w-24 h-24 rounded-2xl object-cover border border-white/10 shadow-xl" alt="" />
-                                        <button onClick={() => setFormData({...formData, image_url: ''})} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold">×</button>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                         <>
+                             <div className="grid grid-cols-2 gap-3">
+                                 <input placeholder={t.fromLocation} value={formData.from_location} onChange={e => setFormData({...formData, from_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                 <input placeholder={t.toLocation} value={formData.to_location} onChange={e => setFormData({...formData, to_location: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                             </div>
+                             <div className="grid grid-cols-2 gap-3">
+                                <input placeholder={t.viewCars === 'Машины' ? 'Тип авто (Vito, и т.д.)' : 'Car Type'} value={formData.car_type} onChange={e => setFormData({...formData, car_type: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                                <input type="number" placeholder={t.price} value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                             </div>
+                             
+                             <textarea 
+                                placeholder={t.description} 
+                                rows={3} 
+                                value={formData.description || ''} 
+                                onChange={e => setFormData({...formData, description: e.target.value})} 
+                                className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" 
+                             />
+
+                             {formData.image_url && (
+                                 <div className="flex justify-center">
+                                     <div className="relative">
+                                         <img src={formData.image_url} className="w-24 h-24 rounded-2xl object-cover border border-white/10 shadow-xl" alt="" />
+                                         <button onClick={() => setFormData({...formData, image_url: ''})} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold">×</button>
+                                     </div>
+                                 </div>
+                             )}
+                         </>
                     )}
 
                     <div className="flex items-center gap-3">
