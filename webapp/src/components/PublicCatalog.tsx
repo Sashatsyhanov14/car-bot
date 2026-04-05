@@ -182,7 +182,15 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                      <h2 className="text-3xl font-black text-white mb-2">
                         {serviceType === 'car' ? `${selectedItem.brand} ${selectedItem.model}` : `${getItemField(selectedItem, 'from_location')} → ${getItemField(selectedItem, 'to_location')}`}
                      </h2>
-                     <p className="text-slate-400 text-sm leading-relaxed mb-8">{getItemField(selectedItem, 'description')}</p>
+
+                     {serviceType === 'transfer' && (
+                        <div className="flex items-center gap-2 mb-4 bg-white/5 p-2 rounded-xl border border-white/5">
+                            <span className="material-symbols-outlined text-primary text-sm tracking-widest uppercase">AirportShuttle</span>
+                            <span className="text-xs text-slate-300 font-bold tracking-widest uppercase">{selectedItem.car_type} • ${selectedItem.price}</span>
+                        </div>
+                     )}
+
+                     <p className="text-slate-400 text-sm leading-relaxed mb-8">{getItemField(selectedItem, 'description') || (currentLang === 'ru' ? 'Описание скоро появится...' : 'Description coming soon...')}</p>
                      
                      <div className="sticky bottom-4">
                         <button 
