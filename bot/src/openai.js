@@ -95,7 +95,8 @@ module.exports = {
                 embeddedTags += `\n[BOOK_REQUEST: ${searchResults.match_type || 'car'}:${searchResults.match_id}]`;
             }
 
-            return finalMessage + '\n' + embeddedTags;
+            const responseText = finalMessage + '\n' + embeddedTags;
+            return { finalMessage: responseText, analysis };
 
         } catch (error) {
             console.error('[OpenAI Fatal Error]:', error.message);
@@ -103,7 +104,10 @@ module.exports = {
                 console.error('[OpenAI Status]:', error.response.status);
                 console.error('[OpenAI Data]:', error.response.data);
             }
-            return 'Извините, произошла ошибка. Пожалуйста, попробуйте чуть позже.';
+            return { 
+                finalMessage: 'Извините, произошла ошибка. Пожалуйста, попробуйте чуть позже.', 
+                analysis: { lang_code: 'ru', intent: 'consultation' } 
+            };
         }
     },
 

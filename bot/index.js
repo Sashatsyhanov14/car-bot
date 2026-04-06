@@ -632,12 +632,12 @@ bot.on('text', async (ctx) => {
 
         try { await ctx.sendChatAction('typing'); } catch (e) { }
 
-        const aiResponse = await getChatResponse(cars, transfers, faqText, history, userText);
+        const { finalMessage, analysis } = await getChatResponse(cars, transfers, faqText, history, userText);
 
-        const bookMatch = aiResponse.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
-        const langMatch = aiResponse.match(/\[LANG:\s*([a-z]{2})\]/i);
+        const bookMatch = finalMessage.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
+        const langMatch = finalMessage.match(/\[LANG:\s*([a-z]{2})\]/i);
         
-        let finalResponse = aiResponse.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+        let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
 
         // 1. Handle Language Update from AI detection
         if (langMatch) {
