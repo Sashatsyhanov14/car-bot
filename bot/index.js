@@ -108,11 +108,8 @@ bot.action(/^bonus_req_(.+)$/, async (ctx) => {
     try {
         // Начисление 1% рефереру покупателя
         const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', request.user_id).single();
-        const price = request.price_usd || (request.price_rub ? request.price_rub / 100 : 0); // Fallback for old ruble field if needed
-        
-        if (buyer?.referrer_id && (request.price_usd || request.price_rub)) {
-            const rewardPercentage = 0.01; // 1% for rentals/transfers
-            const reward = Math.round((price * rewardPercentage) * 100) / 100;
+        if (buyer?.referrer_id && request.price_usd) {
+            const reward = Math.round(request.price_usd * 0.01);
             const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
             const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
             await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
@@ -308,7 +305,7 @@ async function handleWebAppData(ctx, dataStr) {
                 full_name: fullName,
                 tour_date: date,
                 hotel_name: from || '—',
-                price_rub: price || 0,
+                price_usd: price || 0,
                 meta_data: { serviceType, itemId, to, passengers, phone },
                 status: 'new',
                 created_at: new Date().toISOString()
@@ -516,19 +513,19 @@ bot.on('text', async (ctx) => {
                 const { serviceType, itemId } = state;
 
                 let itemTitle = serviceType === 'car' ? 'Аренда авто' : 'Трансфер';
-                let priceRub = 0;
+                let priceUsd = 0;
 
                 if (serviceType === 'car') {
                     const { data: car } = await supabase.from('cars').select('*').eq('id', itemId).single();
                     if (car) {
                         itemTitle = `${car.brand} ${car.model}`;
-                        priceRub = car.price_per_day;
+                        priceUsd = car.price_per_day;
                     }
                 } else {
                     const { data: trans } = await supabase.from('transfers').select('*').eq('id', itemId).single();
                     if (trans) {
                         itemTitle = `Трансфер: ${trans.from_location} -> ${trans.to_location}`;
-                        priceRub = trans.price;
+                        priceUsd = trans.price;
                     }
                 }
 
@@ -538,7 +535,7 @@ bot.on('text', async (ctx) => {
                     state.data.fullName,
                     state.data.tourDate,
                     state.data.hotelName,
-                    priceRub,
+                    priceUsd,
                     { phone: state.data.phone, serviceType, itemId }
                 );
 
@@ -667,8 +664,15 @@ bot.on('text', async (ctx) => {
                 : (transfers || []).find(t => t.id === itemId);
 
             if (item) {
+                const isNewItem = lastShownItem[telegramId] !== itemId;
+                const isSearch = analysis.intent === 'car_search' || analysis.intent === 'transfer_search';
+                
+                // Only send photos if it's a NEW item for the user OR if they are specifically searching/asking
+                if (isNewItem || isSearch) {
+                    await sendItemPhotos(telegramId, item);
+                }
+                
                 lastShownItem[telegramId] = itemId;
-                await sendItemPhotos(telegramId, item);
                 photoSent = true;
             }
 

@@ -38,7 +38,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
         const { data: allReqs, count: rCount } = await supabase.from('requests').select('*');
         if (allReqs) {
             const newReqs = allReqs.filter((r: any) => r.status === 'new').length;
-            const revenue = allReqs.filter((r: any) => r.status !== 'cancelled').reduce((acc: number, curr: any) => acc + (Number(curr.price_rub) || 0), 0);
+            const revenue = allReqs.filter((r: any) => r.status !== 'cancelled').reduce((acc: number, curr: any) => acc + (Number(curr.price_usd) || 0), 0);
             setStats({ totalUsers: uCount || 0, totalRequests: rCount || 0, newRequests: newReqs, totalRevenue: revenue });
         }
     };
@@ -75,7 +75,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
         const inviteeIds = invitedUsers.map((u: any) => u.telegram_id);
         const { data: allReqs } = await supabase
             .from('requests')
-            .select('user_id, price_rub, status, excursion_title, tour_date, full_name, created_at')
+            .select('user_id, price_usd, status, excursion_title, tour_date, full_name, created_at, service_type')
             .in('user_id', inviteeIds)
             .neq('status', 'cancelled')
             .order('created_at', { ascending: false });
@@ -86,9 +86,9 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
             const myInviteeIds = myInvitees.map((u: any) => u.telegram_id);
             const myReqs = (allReqs || []).filter((r: any) => myInviteeIds.includes(r.user_id));
             
-            const revenue = myReqs.reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
-            const carRev = myReqs.filter((r: any) => r.service_type === 'car').reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
-            const transRev = myReqs.filter((r: any) => r.service_type === 'transfer').reduce((sum: number, r: any) => sum + (Number(r.price_rub) || 0), 0);
+            const revenue = myReqs.reduce((sum: number, r: any) => sum + (Number(r.price_usd) || 0), 0);
+            const carRev = myReqs.filter((r: any) => r.service_type === 'car').reduce((sum: number, r: any) => sum + (Number(r.price_usd) || 0), 0);
+            const transRev = myReqs.filter((r: any) => r.service_type === 'transfer').reduce((sum: number, r: any) => sum + (Number(r.price_usd) || 0), 0);
             
             const conversion = myInvitees.length > 0 ? ((myReqs.length / myInvitees.length) * 100).toFixed(1) : '0';
 
@@ -326,7 +326,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                                             <p className="text-slate-500">{r.full_name || '—'} · {r.tour_date || '—'}</p>
                                                         </div>
                                                         <div className="text-right flex-shrink-0 ml-2">
-                                                            <p className="text-primary font-black">${r.price_rub || 0}</p>
+                                                            <p className="text-primary font-black">${r.price_usd || 0}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -392,7 +392,7 @@ const AdminStats: React.FC<{ t: any }> = ({ t }) => {
                                     </div>
                                     <h4 className="font-bold text-slate-100 text-sm">{req.excursion_title || 'Заявка'}</h4>
                                 </div>
-                                <p className="text-primary font-bold">${req.price_rub}</p>
+                                <p className="text-primary font-bold">${req.price_usd || 0}</p>
                             </div>
                             <div className="flex items-center justify-between text-[10px]">
                                 <p className="text-slate-400">@{req.users?.username || 'user'}</p>

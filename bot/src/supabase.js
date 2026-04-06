@@ -108,7 +108,7 @@ module.exports = {
     return { data, error };
   },
 
-  async createRequest(userId, serviceTitle, fullName, tourDate, pickupLocation, priceRub, meta) {
+  async createRequest(userId, serviceTitle, fullName, tourDate, pickupLocation, priceUsd, meta) {
     const reqId = crypto.randomUUID();
     const { data, error } = await supabase
       .from('requests')
@@ -119,7 +119,7 @@ module.exports = {
         full_name: fullName,
         tour_date: tourDate,
         hotel_name: pickupLocation, // Using existing column for pickup
-        price_rub: priceRub,
+        price_usd: priceUsd,
         meta_data: meta || {},
         status: 'new',
         created_at: new Date().toISOString()
