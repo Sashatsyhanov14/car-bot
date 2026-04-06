@@ -19,6 +19,12 @@ const userStates = new Map(); // { telegramId: { step: 'name'|'date'|'hotel', it
 // QR button keywords for detection in any language
 const QR_KEYWORDS = ['qr', 'промокод', 'promo', 'refer', 'реферал', 'benim qr', 'qrcode'];
 
+// Helper to escape special characters for Telegram Markdown
+const esc = (str) => {
+    if (!str) return '—';
+    return String(str).replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+};
+
 bot.use(session());
 
 // --- TOP-LEVEL DEBUG LOGGING ---
@@ -102,11 +108,22 @@ bot.action(/^bonus_req_(.+)$/, async (ctx) => {
     try {
         // Начисление 1% рефереру покупателя
         const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', request.user_id).single();
-        if (buyer?.referrer_id && request.price_rub) {
-            const reward = Math.round(request.price_rub * 0.01);
+        const price = request.price_usd || (request.price_rub ? request.price_rub / 100 : 0); // Fallback for old ruble field if needed
+        
+        if (buyer?.referrer_id && (request.price_usd || request.price_rub)) {
+            const rewardPercentage = 0.01; // 1% for rentals/transfers
+            const reward = Math.round((price * rewardPercentage) * 100) / 100;
             const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
-            const newBalance = Math.round(((refUser?.balance || 0) + reward));
+            const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
             await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
+            
+            // Log commission for WebApp analytics
+            await supabase.from('chat_history').insert({
+                user_id: buyer.referrer_id,
+                role: 'assistant',
+                content: `COMMISSION_RECORD:${reward}:request_${requestId}:buyer_${request.user_id}`,
+                created_at: new Date().toISOString()
+            }).catch(e => console.error('Commission log error:', e.message));
 
             try {
                 const refLang = userLangCache[buyer.referrer_id] || 'ru';
@@ -199,6 +216,14 @@ bot.start(async (ctx) => {
                 language_code: ctx.from.language_code || 'ru'
             });
             user = newUser;
+        } else if (startPayload && !isNaN(startPayload) && !user.referrer_id) {
+            // Existing user without a referrer came via a referral link — assign now
+            const rId = parseInt(startPayload);
+            if (rId !== telegramId) {
+                await supabase.from('users').update({ referrer_id: rId }).eq('telegram_id', telegramId);
+                user.referrer_id = rId;
+                console.log(`[START] Assigned referrer ${rId} to existing user ${telegramId}`);
+            }
         }
 
         // Default to system language if it's a fresh start, otherwise use DB/History
@@ -295,10 +320,12 @@ async function handleWebAppData(ctx, dataStr) {
             }
 
             // Notify Managers
-            const reportRu = `НОВАЯ ЗАЯВКА\n\nУслуга: ${itemTitle}\nКлиент: ${fullName}\nТелефон: \`${phone}\` \nДата: ${date}${from ? ` \nОткуда: ${from}` : ''}${to ? ` \nКуда: ${to}` : ''}${passengers ? ` \nПассажиров: ${passengers}` : ''}\n\nЗаявка оформлена через Mini App.`;
+            const reportRu = `НОВАЯ ЗАЯВКА\n\nУслуга: ${esc(itemTitle)}\nКлиент: ${esc(fullName)}\nТелефон: \`${esc(phone)}\` \nДата: ${esc(date)}${from ? ` \nОткуда: ${esc(from)}` : ''}${to ? ` \nКуда: ${esc(to)}` : ''}${passengers ? ` \nПассажиров: ${esc(passengers)}` : ''}\n\nЗаявка оформлена через Mini App.`;
             const report = await getLocalizedText('ru', reportRu);
 
             const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+            console.log(`[MANAGER_NOTIFY] Found ${managers?.length || 0} managers in DB`);
+
             if (managers && managers.length > 0) {
                 for (const m of managers) {
                     try { 
@@ -312,6 +339,7 @@ async function handleWebAppData(ctx, dataStr) {
                             ])
                         }); 
                     } catch (e) {
+                        console.error(`[MANAGER_NOTIFY_ERROR] to ${m.telegram_id}: ${e.message}`);
                         try {
                             await bot.telegram.sendMessage(m.telegram_id, report.replace(/[\*_`\[\]()]/g, ''), {
                                 ...Markup.inlineKeyboard([
@@ -319,13 +347,13 @@ async function handleWebAppData(ctx, dataStr) {
                                         Markup.button.callback('Принять', `accept_req_${orderId}`),
                                         Markup.button.callback('Отклонить', `cancel_req_${orderId}`)
                                     ]
-                                ])
+                                ]).resize()
                             });
-                        } catch (e2) { console.error(`[MANAGER_NOTIFY_ERROR] to ${m.telegram_id}: ${e2.message}`); }
+                        } catch (e2) { console.error(`[MANAGER_NOTIFY_FATAL] to ${m.telegram_id}: ${e2.message}`); }
                     }
                 }
             } else {
-                console.warn('[handleWebAppData] No managers found to notify.');
+                console.warn('[handleWebAppData] No managers found in DB. Check roles!');
             }
 
             const successRu = 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время. Спасибо.';
@@ -521,11 +549,13 @@ bot.on('text', async (ctx) => {
                 await ctx.reply(thanksMsg);
 
                 // Notify managers
-                const reportRu = `НОВАЯ ЗАЯВКА (ЧАТ)\n\nУслуга: ${itemTitle}\nКлиент: @${ctx.from.username || telegramId}\nФИО: ${state.data.fullName}\nТелефон: \`${state.data.phone}\` \nДата: ${state.data.tourDate}\nМесто: ${state.data.hotelName}`;
+                const reportRu = `НОВАЯ ЗАЯВКА (ЧАТ)\n\nУслуга: ${esc(itemTitle)}\nКлиент: @${esc(ctx.from.username || telegramId)}\nФИО: ${esc(state.data.fullName)}\nТелефон: \`${esc(state.data.phone)}\` \nДата: ${esc(state.data.tourDate)}\nМесто: ${esc(state.data.hotelName)}`;
                 const report = await getLocalizedText('ru', reportRu);
 
                 const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-                if (managers) {
+                console.log(`[MANAGER_NOTIFY_CHAT] Found ${managers?.length || 0} managers in DB`);
+
+                if (managers && managers.length > 0) {
                     for (const m of managers) {
                         try {
                             await bot.telegram.sendMessage(m.telegram_id, report, {
@@ -535,8 +565,12 @@ bot.on('text', async (ctx) => {
                                     Markup.button.callback('Отклонить', `cancel_req_${order.id}`)
                                 ]])
                             });
-                        } catch (e) { }
+                        } catch (e) {
+                            console.error(`[MANAGER_NOTIFY_CHAT_ERROR] to ${m.telegram_id}: ${e.message}`);
+                        }
                     }
+                } else {
+                    console.warn('[CHAT_BOOK] No managers found in DB. Check roles!');
                 }
                 return;
             }
@@ -622,6 +656,7 @@ bot.on('text', async (ctx) => {
         }
 
         // 2. Handle matched item (Photos and booking)
+        let photoSent = false;
         if (bookMatch) {
             const serviceType = bookMatch[1].trim();
             const itemId = bookMatch[2].trim();
@@ -634,13 +669,13 @@ bot.on('text', async (ctx) => {
             if (item) {
                 lastShownItem[telegramId] = itemId;
                 await sendItemPhotos(telegramId, item);
+                photoSent = true;
             }
 
-            // Only start booking flow if the AI explicitly moved to 'sale' intent (detected by response text containing booking questions or explicit intent markers)
-            // But for now, we'll follow the existing logic: if BOOK_REQUEST is there AND the AI is asking for details
-            if (finalResponse.includes('ФИО') || finalResponse.toLowerCase().includes('имя') || finalResponse.toLowerCase().includes('дата')) {
+            // Only start booking flow if the AI explicitly moved to 'sale' intent
+            if (analysis.intent === 'sale') {
                 userStates.set(telegramId, { step: 'name', serviceType, itemId, data: {} });
-                const promptRu = `Отлично! Я помогу с бронированием. Напишите ваше ФИО.`;
+                const promptRu = `Замечательный выбор! Как к вам можно обращаться? Напишите, пожалуйста, ваше ФИО.`;
                 const prompt = await getLocalizedText(userLangCache[telegramId] || 'ru', promptRu);
                 
                 await saveMessage(telegramId, 'assistant', finalResponse);
@@ -653,24 +688,26 @@ bot.on('text', async (ctx) => {
         finalResponse = 'Извините, я задумался. Повторите, пожалуйста, ваш вопрос.';
     }
 
-    // Mentioned item check (to show photos even if not booking)
-    const cleanText = finalResponse.toLowerCase();
-    const mentionedCar = (cars || []).find(c => 
-        (c.brand && cleanText.includes(c.brand.toLowerCase())) || 
-        (c.model && cleanText.includes(c.model.toLowerCase()))
-    );
-    
-    if (mentionedCar) {
-        lastShownItem[telegramId] = mentionedCar.id;
-        await sendItemPhotos(telegramId, mentionedCar);
-    } else {
-        const mentionedTrans = (transfers || []).find(t => 
-            cleanText.includes(t.from_location.toLowerCase()) && 
-            cleanText.includes(t.to_location.toLowerCase())
+    // Mentioned item check (to show photos only if they weren't already sent)
+    if (!photoSent) {
+        const cleanText = finalResponse.toLowerCase();
+        const mentionedCar = (cars || []).find(c => 
+            (c.brand && cleanText.includes(c.brand.toLowerCase())) || 
+            (c.model && cleanText.includes(c.model.toLowerCase()))
         );
-        if (mentionedTrans) {
-            lastShownItem[telegramId] = mentionedTrans.id;
-            await sendItemPhotos(telegramId, mentionedTrans);
+        
+        if (mentionedCar) {
+            lastShownItem[telegramId] = mentionedCar.id;
+            await sendItemPhotos(telegramId, mentionedCar);
+        } else {
+            const mentionedTrans = (transfers || []).find(t => 
+                cleanText.includes(t.from_location.toLowerCase()) && 
+                cleanText.includes(t.to_location.toLowerCase())
+            );
+            if (mentionedTrans) {
+                lastShownItem[telegramId] = mentionedTrans.id;
+                await sendItemPhotos(telegramId, mentionedTrans);
+            }
         }
     }
 
