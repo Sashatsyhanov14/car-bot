@@ -45,6 +45,7 @@ module.exports = {
                 model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: SEARCHER_PROMPT(cars || [], transfers || [], faqText) },
+                    ...history.slice(-3),
                     { role: 'user', content: `Analyzer Search Query: ${analysis.search_query}\nIntent: ${analysis.intent}` }
                 ],
                 temperature: 0.1,
