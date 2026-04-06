@@ -566,7 +566,9 @@ if (loading) return (
     );
   }
 
-  const isOwner = user.role === 'founder' || user.role === 'manager';
+  const isAdmin = user.role === 'founder' || user.role === 'admin';
+  const isManager = user.role === 'manager';
+  const isStaff = isAdmin || isManager;
   const refLink = `https://t.me/emedeorentacat_bot?start=${user.telegram_id}`;
 
   const renderContent = () => {
@@ -691,7 +693,7 @@ if (loading) return (
             </div>
           </div>
         );
-      case 'stats': return <AdminStats t={t} />;
+      case 'stats': return <AdminStats t={t} isAdmin={isAdmin} />;
       case 'fleet': return <AdminFleet t={t} />;
       case 'excursions': return <AdminExcursions t={t} />;
       case 'requests': return <AdminRequests t={t} />;
@@ -717,10 +719,11 @@ if (loading) return (
         <div className="flex items-center gap-2">
           <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${
             user.role === 'founder' ? 'bg-yellow-500/20 text-yellow-400' :
-            user.role === 'manager' ? 'bg-primary/20 text-primary' :
+            user.role === 'admin' ? 'bg-primary/20 text-primary border border-primary/30' :
+            user.role === 'manager' ? 'bg-secondary/20 text-secondary' :
             'bg-white/5 text-slate-500'
           }`}>
-            {user.role === 'founder' ? (t.ownerBadge || 'Owner') : user.role === 'manager' ? t.roleManager : t.roleUser}
+            {user.role === 'founder' ? (t.ownerBadge || 'Owner') : user.role === 'admin' ? 'Admin' : user.role === 'manager' ? t.roleManager : t.roleUser}
           </span>
           <div className="relative">
             <button 
@@ -779,17 +782,20 @@ if (loading) return (
           <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabCatalog}</span>
         </button>
 
-        {isOwner && (
+        {isStaff && (
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
+              activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+            <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
+          </button>
+        )}
+
+        {isAdmin && (
           <>
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
-              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
-            </button>
             <button
               onClick={() => setActiveTab('fleet')}
               className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${

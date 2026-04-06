@@ -42,7 +42,7 @@ bot.action(/^accept_req_(.+)$/, async (ctx) => {
     const managerId = ctx.from.id;
 
     const { data: manager } = await getUser(managerId);
-    if (!manager || (manager.role !== 'founder' && manager.role !== 'manager')) {
+    if (!manager || (manager.role !== 'founder' && manager.role !== 'manager' && manager.role !== 'admin')) {
         return ctx.answerCbQuery('У вас нет прав.', { show_alert: true });
     }
 
@@ -191,7 +191,7 @@ async function handleWebAppData(ctx, dataStr) {
             if (order) {
                 const reportRu = `НОВАЯ ЗАЯВКА (КАТАЛОГ)\n\nМашина: ${esc(itemTitle)}\nКлиент: ${esc(fullName)}\nТелефон: ${esc(phone)}\nДата: ${esc(date)}\nМесто: ${esc(from)}`;
                 const report = await getLocalizedText('ru', reportRu);
-                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin', 'manager']);
                 if (managers) {
                     for (const m of managers) {
                         try { 
