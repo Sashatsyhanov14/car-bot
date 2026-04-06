@@ -10,13 +10,13 @@ dotenv.config({ path: path.resolve(__dirname, './.env') });
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const MANAGER_ID = parseInt(process.env.MANAGER_ID);
 
-// Кеш языков и состояний пользователей
+// Cache systems
 const userLangCache = {};
-const userQrBtnCache = {}; // cached translated QR button text per user
-const lastShownItem = {}; // telegramId → itemId of last shown item
-const userStates = new Map(); // { telegramId: { step: 'name'|'date'|'hotel', itemId, serviceType, data: {} } }
+const userQrBtnCache = {}; 
+const lastShownItem = {}; 
+const userStates = new Map(); // Legacy, kept for compatibility if needed elsewhere
 
-// QR button keywords for detection in any language
+// QR keywords for detection
 const QR_KEYWORDS = ['qr', 'промокод', 'promo', 'refer', 'реферал', 'benim qr', 'qrcode'];
 
 // Helper to escape special characters for Telegram Markdown
@@ -27,14 +27,11 @@ const esc = (str) => {
 
 bot.use(session());
 
-// --- TOP-LEVEL DEBUG LOGGING ---
+// Debug logging
 bot.use(async (ctx, next) => {
     if (ctx.message) {
         const type = ctx.message.web_app_data ? 'WEB_APP_DATA' : (ctx.message.text ? 'TEXT' : 'OTHER');
         console.log(`[DEBUG_TOP] Message from ${ctx.from?.id}: ${type}`);
-        if (ctx.message.web_app_data) {
-            console.log(`[DEBUG_TOP] Data: ${ctx.message.web_app_data.data}`);
-        }
     }
     return next();
 });
@@ -57,12 +54,12 @@ bot.action(/^accept_req_(.+)$/, async (ctx) => {
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text + `\n\nПРИНЯТО: @${ctx.from.username || managerId}`,
+            ctx.callbackQuery.message.text + `\n\n✅ ПРИНЯТО: @${ctx.from.username || managerId}`,
             Markup.inlineKeyboard([])
         );
 
         const lang = userLangCache[request.user_id] || 'ru';
-        const msgRu = `Ваша заявка «${request.excursion_title}» принята в работу. Оператор свяжется с вами в ближайшее время.`;
+        const msgRu = `Ваша заявка на «${request.excursion_title}» принята в работу. Оператор свяжется с вами в ближайшее время.`;
         const msg = await getLocalizedText(lang, msgRu);
         await bot.telegram.sendMessage(request.user_id, msg);
 
@@ -84,7 +81,7 @@ bot.action(/^cancel_req_(.+)$/, async (ctx) => {
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text + `\n\nОТКЛОНЕНО: @${ctx.from.username || managerId}`,
+            ctx.callbackQuery.message.text + `\n\n❌ ОТКЛОНЕНО: @${ctx.from.username || managerId}`,
             Markup.inlineKeyboard([])
         );
     } catch (e) { }
@@ -92,57 +89,7 @@ bot.action(/^cancel_req_(.+)$/, async (ctx) => {
     await ctx.answerCbQuery('Заявка отклонена.');
 });
 
-// Начисль бонусы рефереру за заявку
-bot.action(/^bonus_req_(.+)$/, async (ctx) => {
-    const requestId = ctx.match[1];
-    const managerId = ctx.from.id;
-
-    const { data: manager } = await getUser(managerId);
-    if (!manager || (manager.role !== 'founder' && manager.role !== 'manager')) {
-        return ctx.answerCbQuery('Простите, нет прав.', { show_alert: true });
-    }
-
-    const { data: request } = await supabase.from('requests').select('*').eq('id', requestId).single();
-    if (!request) return ctx.answerCbQuery('Заявка не найдена.', { show_alert: true });
-
-    try {
-        // Начисление 1% рефереру покупателя
-        const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', request.user_id).single();
-        if (buyer?.referrer_id && request.price_usd) {
-            const reward = Math.round(request.price_usd * 0.01);
-            const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
-            const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
-            await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
-            
-            // Log commission for WebApp analytics
-            await supabase.from('chat_history').insert({
-                user_id: buyer.referrer_id,
-                role: 'assistant',
-                content: `COMMISSION_RECORD:${reward}:request_${requestId}:buyer_${request.user_id}`,
-                created_at: new Date().toISOString()
-            }).catch(e => console.error('Commission log error:', e.message));
-
-            try {
-                const refLang = userLangCache[buyer.referrer_id] || 'ru';
-                const refRu = `Вам начислено $${reward} (1% от заявки на «${request.excursion_title}»)! Ваш баланс: $${newBalance}`;
-                const refMsg = await getLocalizedText(refLang, refRu);
-                await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
-            } catch (e) { }
-
-            await ctx.editMessageText(
-                ctx.callbackQuery.message.text + `\n\nБОНУС $${reward} начислен рефереру (ID: ${buyer.referrer_id})`,
-                Markup.inlineKeyboard([])
-            );
-            await ctx.answerCbQuery(`Бонус $${reward} успешно начислен.`, { show_alert: true });
-        } else {
-            await ctx.answerCbQuery('У этого клиента нет реферера или не указана стоимость услуги.', { show_alert: true });
-        }
-    } catch (e) {
-        console.error('Bonus action error:', e.message);
-        await ctx.answerCbQuery('Ошибка при начислении.', { show_alert: true });
-    }
-});
-
+// --- CLIENT ACTIONS ---
 bot.action(/^start_chat_book_(.+)$/, async (ctx) => {
     const telegramId = ctx.from.id;
     const itemId = ctx.match[1];
@@ -154,47 +101,39 @@ bot.action(/^start_chat_book_(.+)$/, async (ctx) => {
     
     if (!selected) return ctx.answerCbQuery('Услуга не найдена.', { show_alert: true });
 
-    const serviceType = selected.brand ? 'car' : 'transfer';
-    userStates.set(telegramId, { step: 'name', itemId, serviceType, data: {} });
-    
     const lang = userLangCache[telegramId] || 'ru';
-    const namePromptRu = `Оформим бронь! Как к вам можно обращаться? Напишите, пожалуйста, ваше ФИО.`;
-    const namePrompt = await getLocalizedText(lang, namePromptRu);
+    const msgRu = `Отличный выбор! Я помогу с бронированием. Пожалуйста, напишите ваше Имя, желаемую Дату и Телефон прямо здесь в чате.`;
+    const msg = await getLocalizedText(lang, msgRu);
     
     await ctx.answerCbQuery();
-    return ctx.reply(namePrompt, Markup.inlineKeyboard([[Markup.button.callback('Отмена', 'cancel_stepper')]]));
+    return ctx.reply(msg);
 });
 
 bot.action('cancel_stepper', async (ctx) => {
     userStates.delete(ctx.from.id);
     const lang = userLangCache[ctx.from.id] || 'ru';
-    const msg = await getLocalizedText(lang, 'Бронирование отменено. Если возникнут вопросы — я на связи.');
-    await ctx.answerCbQuery('Отменено');
-    return ctx.editMessageText(msg, Markup.inlineKeyboard([]));
+    const msg = await getLocalizedText(lang, 'Бронирование отменено.');
+    await ctx.answerCbQuery();
+    return ctx.editMessageText(msg);
 });
 
-// --- CLIENT FLOW ---
+// --- CORE LOGIC ---
 bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
     const startPayload = ctx.payload;
 
     try {
-        console.log(`[START] Triggered for ${username} (${telegramId}), payload: ${startPayload}`);
+        console.log(`[START] Triggered for ${username} (${telegramId})`);
 
-        // --- QR DEEP LINK from WebApp button ---
         if (startPayload && startPayload.startsWith('getqr_')) {
             const lang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
             const botUsername = ctx.botInfo?.username || 'emedeorentacat_bot';
             const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=15&bgcolor=ffffff`;
-            const captionRu = `Link: \`${refLink}\` \nPromo: \`${telegramId}\` \n\nПоделитесь QR или промокодом — получайте 1$ за каждого друга.`;
+            const captionRu = `Link: \`${refLink}\` \nPromo: \`${telegramId}\` \n\nПоделитесь QR или промокодом — получайте бонусы за каждого друга.`;
             const caption = await getLocalizedText(lang, captionRu);
-            try {
-                await ctx.replyWithPhoto(qrUrl, { caption, parse_mode: 'Markdown' });
-            } catch {
-                await ctx.reply(caption, { parse_mode: 'Markdown' });
-            }
+            try { await ctx.replyWithPhoto(qrUrl, { caption, parse_mode: 'Markdown' }); } catch { await ctx.reply(caption, { parse_mode: 'Markdown' }); }
             return;
         }
 
@@ -203,76 +142,34 @@ bot.start(async (ctx) => {
 
         let { data: user } = await getUser(telegramId);
         if (!user) {
-            const referrerId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
+            const rId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
             const { data: newUser } = await createUser({
                 telegram_id: telegramId,
                 username: username,
                 role: 'user',
-                referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
+                referrer_id: (rId && rId !== telegramId) ? rId : null,
                 balance: 0,
                 language_code: ctx.from.language_code || 'ru'
             });
             user = newUser;
-        } else if (startPayload && !isNaN(startPayload) && !user.referrer_id) {
-            // Existing user without a referrer came via a referral link — assign now
-            const rId = parseInt(startPayload);
-            if (rId !== telegramId) {
-                await supabase.from('users').update({ referrer_id: rId }).eq('telegram_id', telegramId);
-                user.referrer_id = rId;
-                console.log(`[START] Assigned referrer ${rId} to existing user ${telegramId}`);
-            }
         }
 
-        // Default to system language if it's a fresh start, otherwise use DB/History
-        const lang = ctx.from.language_code || 'ru';
+        const lang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
         userLangCache[telegramId] = lang;
 
-        if (user && !user.language_code) {
-            try {
-                await supabase.from('users').update({ language_code: lang }).eq('telegram_id', telegramId);
-            } catch (err) {
-                console.error('[DATABASE_UPDATE_ERROR] Start language:', err.message);
-            }
-        }
-
-        const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим? Напишите город или просто спросите, что у нас есть.`;
+        const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим?`;
         const welcomeText = await getLocalizedText(lang, welcomeRu);
-
-        const webappBtnRu = 'Открыть Каталог';
-        const webappBtn = await getLocalizedText(lang, webappBtnRu);
+        const webappBtn = await getLocalizedText(lang, 'Открыть Каталог');
 
         await ctx.reply(welcomeText,
-            Markup.keyboard([
-                [Markup.button.webApp(webappBtn, `${process.env.WEBAPP_URL || ''}?uid=${telegramId}`)]
-            ]).resize()
+            Markup.keyboard([[Markup.button.webApp(webappBtn, `${process.env.WEBAPP_URL || ''}?uid=${telegramId}`)]]).resize()
         );
-    } catch (err) {
-        console.error('[START] Error:', err.message);
-    }
+    } catch (err) { console.error('[START] Error:', err.message); }
 });
 
-bot.command('ref', async (ctx) => {
-    const telegramId = ctx.from.id;
-    const lang = userLangCache[telegramId] || 'ru';
-    const refLink = `https://t.me/${ctx.botInfo.username}?start=${telegramId}`;
-
-    const textRu = `Ваша реферальная ссылка:\n\n${refLink}\n\nВаш промокод: \`${telegramId}\` \n\nПриглашайте друзей и получайте бонусы.`;
-    const text = await getLocalizedText(lang, textRu);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
-
-    try {
-        await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' });
-    } catch (err) {
-        await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
-    }
-});
-
-// --- WEB APP DATA (sendData from mini-app buttons) ---
 bot.on('message', async (ctx, next) => {
-    const dataStr = ctx.message?.web_app_data?.data;
-    if (dataStr) {
-        console.log(`[WEB_APP_DATA_RECEIVED] From ${ctx.from?.id}: ${dataStr}`);
-        await handleWebAppData(ctx, dataStr);
+    if (ctx.message?.web_app_data) {
+        await handleWebAppData(ctx, ctx.message.web_app_data.data);
         return;
     }
     return next();
@@ -281,486 +178,153 @@ bot.on('message', async (ctx, next) => {
 async function handleWebAppData(ctx, dataStr) {
     const telegramId = ctx.from?.id;
     const lang = userLangCache[telegramId] || 'ru';
-
     try {
-        let data;
-        try {
-            data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
-        } catch (jsonErr) {
-            console.error(`[handleWebAppData] JSON Parse Error: ${jsonErr.message}. Data:`, dataStr);
-            return;
-        }
-
-        console.log(`[HANDLE_DATA] Type: ${data.type}`);
-        
-        // --- Quick Booking from Catalog ---
+        const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
         if (data.type === 'quick_book') {
-            const { serviceType, itemId, itemTitle, fullName, phone, date, price, from, to, passengers } = data;
-            
+            const { itemTitle, fullName, phone, date, from, price } = data;
             const orderId = crypto.randomUUID();
-            const { error: insErr } = await supabase.from('requests').insert([{
-                id: orderId,
-                user_id: telegramId,
-                excursion_title: itemTitle || (serviceType === 'car' ? 'Аренда авто' : 'Трансфер'),
-                full_name: fullName,
-                tour_date: date,
-                hotel_name: from || '—',
-                price_usd: price || 0,
-                meta_data: { serviceType, itemId, to, passengers, phone },
-                status: 'new',
-                created_at: new Date().toISOString()
-            }]);
+            const { data: order } = await supabase.from('requests').insert([{
+                id: orderId, user_id: telegramId, excursion_title: itemTitle, full_name: fullName, 
+                tour_date: date, hotel_name: from || '—', price_usd: price || 0, status: 'new'
+            }]).select().single();
 
-            if (insErr) {
-                console.error('[BOOKING_INSERT_ERROR]', insErr);
-                return ctx.reply('Ошибка при сохранении заявки.');
-            }
-
-            // Notify Managers
-            const reportRu = `НОВАЯ ЗАЯВКА\n\nУслуга: ${esc(itemTitle)}\nКлиент: ${esc(fullName)}\nТелефон: \`${esc(phone)}\` \nДата: ${esc(date)}${from ? ` \nОткуда: ${esc(from)}` : ''}${to ? ` \nКуда: ${esc(to)}` : ''}${passengers ? ` \nПассажиров: ${esc(passengers)}` : ''}\n\nЗаявка оформлена через Mini App.`;
-            const report = await getLocalizedText('ru', reportRu);
-
-            const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-            console.log(`[MANAGER_NOTIFY] Found ${managers?.length || 0} managers in DB`);
-
-            if (managers && managers.length > 0) {
-                for (const m of managers) {
-                    try { 
-                        await bot.telegram.sendMessage(m.telegram_id, report, { 
-                            parse_mode: 'Markdown',
-                            ...Markup.inlineKeyboard([
-                                [
-                                    Markup.button.callback('Принять', `accept_req_${orderId}`),
-                                    Markup.button.callback('Отклонить', `cancel_req_${orderId}`)
-                                ]
-                            ])
-                        }); 
-                    } catch (e) {
-                        console.error(`[MANAGER_NOTIFY_ERROR] to ${m.telegram_id}: ${e.message}`);
-                        try {
-                            await bot.telegram.sendMessage(m.telegram_id, report.replace(/[\*_`\[\]()]/g, ''), {
-                                ...Markup.inlineKeyboard([
-                                    [
-                                        Markup.button.callback('Принять', `accept_req_${orderId}`),
-                                        Markup.button.callback('Отклонить', `cancel_req_${orderId}`)
-                                    ]
-                                ]).resize()
-                            });
-                        } catch (e2) { console.error(`[MANAGER_NOTIFY_FATAL] to ${m.telegram_id}: ${e2.message}`); }
+            if (order) {
+                const reportRu = `НОВАЯ ЗАЯВКА (КАТАЛОГ)\n\nМашина: ${esc(itemTitle)}\nКлиент: ${esc(fullName)}\nТелефон: ${esc(phone)}\nДата: ${esc(date)}\nМесто: ${esc(from)}`;
+                const report = await getLocalizedText('ru', reportRu);
+                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+                if (managers) {
+                    for (const m of managers) {
+                        try { 
+                            await bot.telegram.sendMessage(m.telegram_id, report, {
+                                ...Markup.inlineKeyboard([[Markup.button.callback('Принять', `accept_req_${orderId}`), Markup.button.callback('Отклонить', `cancel_req_${orderId}`)]])
+                            }); 
+                        } catch (e) {}
                     }
                 }
-            } else {
-                console.warn('[handleWebAppData] No managers found in DB. Check roles!');
             }
-
-            const successRu = 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время. Спасибо.';
-            const successMsg = await getLocalizedText(lang, successRu);
-            return ctx.reply(successMsg, { parse_mode: 'Markdown' });
+            const successMsg = await getLocalizedText(lang, 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время.');
+            return ctx.reply(successMsg);
         }
-
-        // --- DEAD CODE REMOVED (Excursion Translation) ---
-
-        // --- Withdraw Request ---
-        if (data.type === 'withdraw_request') {
-            const { amount, method } = data;
-            
-            // 1. Get all managers and founders from the DB
-            const { data: staff } = await supabase.from('users').select('telegram_id').in('role', ['manager', 'founder']);
-            
-            // 2. Prepare notification list (always include ADMIN_ID from .env just in case)
-            const recipientIds = new Set((staff || []).map(s => s.telegram_id));
-            if (process.env.ADMIN_ID) recipientIds.add(process.env.ADMIN_ID);
-            if (process.env.MANAGER_ID) recipientIds.add(process.env.MANAGER_ID);
-
-            const adminNotify = `ЗАПРОС НА ВЫВОД БОНУСОВ\n\nКлиент: @${ctx.from.username || 'unknown'} (\`${telegramId}\`)\nСумма: ${amount} $ \nРеквизиты: ${method} \n\nПожалуйста, проведите выплату и свяжитесь с клиентом.`;
-            
-            // 3. Broadcast to all recipients
-            for (const mId of recipientIds) {
-                try {
-                    await ctx.telegram.sendMessage(mId, adminNotify, { parse_mode: 'Markdown' });
-                } catch (e) {
-                    console.error(`[WITHDRAW_BROADCAST_ERROR] to ${mId}:`, e.message);
-                }
-            }
-            return;
-        }
-    } catch (e) {
-        console.error(`[HANDLE_DATA_FATAL_ERROR] ${e.message}`, e);
-    }
+    } catch (e) { console.error('[WEBAPP_DATA] Error:', e.message); }
 }
-
-// Keep a minimal message event to not block other logic
-bot.on('message', async (ctx, next) => {
-    if (ctx.message?.web_app_data) return; // already handled
-    console.log(`[INCOMING] From ${ctx.from.id}: ${ctx.message.text || 'non-text'}`);
-    return next();
-});
 
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     const userText = ctx.message.text.trim();
-    const state = userStates.get(telegramId);
 
-    // --- QR BUTTON HANDLER ---
-    const isQrRequest =
-        (userQrBtnCache[telegramId] && userText === userQrBtnCache[telegramId]) ||
-        QR_KEYWORDS.some(kw => userText.toLowerCase().includes(kw));
-
-    if (isQrRequest) {
+    // QR Keywords
+    if (QR_KEYWORDS.some(kw => userText.toLowerCase().includes(kw))) {
         const lang = userLangCache[telegramId] || 'ru';
         const botUsername = ctx.botInfo?.username || 'emedeorentacat_bot';
         const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=15&bgcolor=ffffff`;
-
-        const captionRu = `Link: \`${refLink}\` \nPromo: \`${telegramId}\` \n\nПоделитесь этим QR или промокодом — и получайте бонусы за каждого друга.`;
-        const caption = await getLocalizedText(lang, captionRu);
-
-        try {
-            await ctx.replyWithPhoto(qrUrl, { caption, parse_mode: 'Markdown' });
-        } catch (e) {
-            await ctx.reply(caption, { parse_mode: 'Markdown', disable_web_page_preview: true });
-        }
+        const caption = await getLocalizedText(lang, `Ваша ссылка: \`${refLink}\` \nВаш промокод: \`${telegramId}\``);
+        try { await ctx.replyWithPhoto(qrUrl, { caption, parse_mode: 'Markdown' }); } catch { await ctx.reply(caption, { parse_mode: 'Markdown' }); }
         return;
     }
-    // --- PHOTO REQUEST HANDLER ---
-    const PHOTO_KEYWORDS = ['фото', 'photo', 'фотографи', 'покажи', 'картинк', 'picture', 'image', 'resim', 'fotoğraf', 'görsel'];
-    const isPhotoRequest = PHOTO_KEYWORDS.some(kw => userText.toLowerCase().includes(kw)) && !state;
 
-    if (isPhotoRequest) {
+    // Photo Request
+    const PHOTO_KEYWORDS = ['фото', 'photo', 'фотографи', 'покажи', 'картинк', 'picture', 'image', 'resim', 'fotoğraf', 'görsel'];
+    if (PHOTO_KEYWORDS.some(kw => userText.toLowerCase().includes(kw))) {
         const lang = userLangCache[telegramId] || 'ru';
         try { await ctx.sendChatAction('upload_photo'); } catch (e) {}
-
-        // Find last mentioned item from cache or recent history
         const { data: cars } = await getCars();
         const { data: transfers } = await getTransfers();
         const items = [...(cars || []), ...(transfers || [])];
-        let foundItem = null;
-
-        // Check cache first (last item shown to this user)
-        const cachedId = lastShownItem[telegramId];
-        if (cachedId && items.length > 0) {
-            foundItem = items.find(i => i.id === cachedId);
-        }
-
-        // Fallback: scan last bot messages for names
-        if (!foundItem && items.length > 0) {
-            const { data: history } = await getHistory(telegramId);
-            const botMessages = (history || []).filter(m => m.role === 'assistant').slice(-5);
-            for (const item of items) {
-                const searchStr = item.brand ? `${item.brand} ${item.model}` : `${item.from_location} ${item.to_location}`;
-                if (botMessages.some(m => m.content?.toLowerCase().includes(searchStr.toLowerCase()))) {
-                    foundItem = item;
-                    break;
-                }
-            }
-        }
-
+        let foundItem = items.find(i => i.id === lastShownItem[telegramId]);
         if (foundItem) {
             await sendItemPhotos(telegramId, foundItem);
-            const title = foundItem.brand ? `${foundItem.brand} ${foundItem.model}` : `${foundItem.from_location} → ${foundItem.to_location}`;
-            const replyRu = `Фотографии по вашему запросу («${title}»).`;
-            const reply = await getLocalizedText(lang, replyRu);
-            await ctx.reply(reply);
-        } else {
-            const notFoundRu = `Напишите, что именно вас интересует — и я покажу фото.`;
-            await ctx.reply(await getLocalizedText(lang, notFoundRu));
-        }
-        return;
-    }
-
-    // --- STATE MACHINE (Сбор данных заказа) ---
-    if (state) {
-        const lang = userLangCache[telegramId] || 'ru';
-        
-        // --- SMART ESCAPE: Если похоже на вопрос или смену темы ---
-        const questionWords = ['как', 'где', 'что', 'когда', 'почему', 'сколько', 'цена', 'стоимость', 'далеко', 'какой', 'какие', 'есть', 'можно'];
-        const lowerText = userText.toLowerCase();
-        const isQuestion = 
-            userText.includes('?') || 
-            userText.length > 50 || 
-            questionWords.some(w => lowerText.includes(w)) ||
-            ['нет', 'отмена', 'не надо', 'передумал', 'погоди'].some(w => lowerText.includes(w));
-
-        const cancelBtn = [Markup.button.callback('Отмена', 'cancel_stepper')];
-
-        if (isQuestion) {
-            userStates.delete(telegramId);
-            // Проваливаемся ниже в AI чат
-        } else {
-            if (state.step === 'name') {
-                state.data.fullName = userText;
-                state.step = 'date';
-                const msg = await getLocalizedText(lang, 'Отлично. Теперь напишите желаемую дату (например: завтра, 25 мая, или конкретный период):');
-                return ctx.reply(msg, Markup.inlineKeyboard([cancelBtn]));
-            }
-
-            if (state.step === 'date') {
-                state.data.tourDate = userText;
-                state.step = 'hotel';
-                const msg = await getLocalizedText(lang, 'Понял. Напишите ваш город и место встречи (или адрес, откуда вас забрать):');
-                return ctx.reply(msg, Markup.inlineKeyboard([cancelBtn]));
-            }
-
-            if (state.step === 'hotel') {
-                state.data.hotelName = userText;
-                state.step = 'phone';
-                const msg = await getLocalizedText(lang, 'Почти готово. Укажите номер WhatsApp для связи с оператором:');
-                return ctx.reply(msg, Markup.inlineKeyboard([cancelBtn]));
-            }
-
-            if (state.step === 'phone') {
-                state.data.phone = userText;
-                const { serviceType, itemId } = state;
-
-                let itemTitle = serviceType === 'car' ? 'Аренда авто' : 'Трансфер';
-                let priceUsd = 0;
-
-                if (serviceType === 'car') {
-                    const { data: car } = await supabase.from('cars').select('*').eq('id', itemId).single();
-                    if (car) {
-                        itemTitle = `${car.brand} ${car.model}`;
-                        priceUsd = car.price_per_day;
-                    }
-                } else {
-                    const { data: trans } = await supabase.from('transfers').select('*').eq('id', itemId).single();
-                    if (trans) {
-                        itemTitle = `Трансфер: ${trans.from_location} -> ${trans.to_location}`;
-                        priceUsd = trans.price;
-                    }
-                }
-
-                const { data: order } = await createRequest(
-                    telegramId,
-                    itemTitle,
-                    state.data.fullName,
-                    state.data.tourDate,
-                    state.data.hotelName,
-                    priceUsd,
-                    { phone: state.data.phone, serviceType, itemId }
-                );
-
-                userStates.delete(telegramId);
-
-                const thanksRu = `Спасибо. Заявка на ${itemTitle} отправлена. Менеджер свяжется с вами по номеру ${userText} в ближайшее время.`;
-                const thanksMsg = await getLocalizedText(lang, thanksRu);
-                await ctx.reply(thanksMsg);
-
-                // Notify managers
-                const reportRu = `НОВАЯ ЗАЯВКА (ЧАТ)\n\nУслуга: ${esc(itemTitle)}\nКлиент: @${esc(ctx.from.username || telegramId)}\nФИО: ${esc(state.data.fullName)}\nТелефон: \`${esc(state.data.phone)}\` \nДата: ${esc(state.data.tourDate)}\nМесто: ${esc(state.data.hotelName)}`;
-                const report = await getLocalizedText('ru', reportRu);
-
-                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-                console.log(`[MANAGER_NOTIFY_CHAT] Found ${managers?.length || 0} managers in DB`);
-
-                if (managers && managers.length > 0) {
-                    for (const m of managers) {
-                        try {
-                            await bot.telegram.sendMessage(m.telegram_id, report, {
-                                parse_mode: 'Markdown',
-                                ...Markup.inlineKeyboard([[
-                                    Markup.button.callback('Принять', `accept_req_${order.id}`),
-                                    Markup.button.callback('Отклонить', `cancel_req_${order.id}`)
-                                ]])
-                            });
-                        } catch (e) {
-                            console.error(`[MANAGER_NOTIFY_CHAT_ERROR] to ${m.telegram_id}: ${e.message}`);
-                        }
-                    }
-                } else {
-                    console.warn('[CHAT_BOOK] No managers found in DB. Check roles!');
-                }
-                return;
-            }
+            return ctx.reply(await getLocalizedText(lang, `Фотографии по вашему запросу.`));
         }
     }
 
-    // --- AI ЧАТ ---
-    const username = ctx.from.username || ctx.from.first_name;
-
+    // AI Chat
     try {
         let { data: user } = await getUser(telegramId);
-        if (!user) {
-            const { data: newUser } = await createUser({
-                telegram_id: telegramId,
-                username: ctx.from.username || ctx.from.first_name,
-                role: 'user',
-                balance: 0
-            });
-            user = newUser;
-        }
-
-        const systemLang = ctx.from.language_code || 'ru';
-        if (!userLangCache[telegramId]) {
-            userLangCache[telegramId] = systemLang;
-        }
-        const uiLang = userLangCache[telegramId];
-        
-        if (!user) {
-            console.error('[AI_CHAT] User is null after check/create. Database might be unreachable.');
-            const errRu = 'Извините, сейчас возникла проблема с подключением к базе данных. Попробуйте позже.';
-            const errText = await getLocalizedText(uiLang, errRu);
-            return ctx.reply(errText);
-        }
-
-        // --- PROMO CODE LOGIC ---
-        if (!user.referrer_id && /^\d{6,15}$/.test(userText)) {
-            const promoId = parseInt(userText);
-            if (promoId !== telegramId) {
-                const { data: promoUser } = await getUser(promoId);
-                if (promoUser) {
-                    await supabase.from('users').update({ referrer_id: promoId }).eq('telegram_id', telegramId);
-                    user.referrer_id = promoId;
-
-                    const successRu = 'Промокод успешно применён. Спасибо. А теперь расскажите, какой автомобиль или трансфер вас интересует?';
-                    const successText = await getLocalizedText(uiLang, successRu);
-                    return ctx.reply(successText);
-                }
-            }
-            const failRu = 'Неверный или недействительный промокод.';
-            const failText = await getLocalizedText(uiLang, failRu);
-            return ctx.reply(failText);
-        }
+        const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
+        userLangCache[telegramId] = uiLang;
 
         await saveMessage(telegramId, 'user', userText);
-
-        const { data: history } = await getHistory(telegramId);
+        const { data: history } = await getHistory(telegramId, 15);
         const { data: cars } = await getCars();
         const { data: transfers } = await getTransfers();
         const { data: faqRows } = await getFaq();
-
         const faqText = faqRows ? faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') : '';
 
-        try { await ctx.sendChatAction('typing'); } catch (e) { }
+        try { await ctx.sendChatAction('typing'); } catch (e) {}
 
         const { finalMessage, analysis } = await getChatResponse(cars, transfers, faqText, history, userText);
-
+        
         const bookMatch = finalMessage.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         const langMatch = finalMessage.match(/\[LANG:\s*([a-z]{2})\]/i);
+        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*date:(.*?)\s*\|\s*loc:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
         
-        let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+        let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').replace(/\[ORDER_READY:.*?\]/gi, '').trim();
 
-        // 1. Handle Language Update from AI detection
         if (langMatch) {
             const newLang = langMatch[1].toLowerCase();
             if (userLangCache[telegramId] !== newLang) {
                 userLangCache[telegramId] = newLang;
-                try {
-                    await supabase.from('users').update({ language_code: newLang }).eq('telegram_id', telegramId);
-                } catch (err) {
-                    console.error('[DATABASE_UPDATE_ERROR] Message language:', err.message);
-                }
+                await supabase.from('users').update({ language_code: newLang }).eq('telegram_id', telegramId).catch(() => {});
             }
         }
 
-        // 2. Handle matched item (Photos and booking)
-        let photoSent = false;
         if (bookMatch) {
-            const serviceType = bookMatch[1].trim();
             const itemId = bookMatch[2].trim();
-            
-            // Find the item in our local data to get details/photos
-            const item = serviceType === 'car' 
-                ? (cars || []).find(c => c.id === itemId)
-                : (transfers || []).find(t => t.id === itemId);
-
+            const serviceType = bookMatch[1].trim();
+            const item = serviceType === 'car' ? (cars || []).find(c => c.id === itemId) : (transfers || []).find(t => t.id === itemId);
             if (item) {
-                const isNewItem = lastShownItem[telegramId] !== itemId;
-                const isSearch = analysis.intent === 'car_search' || analysis.intent === 'transfer_search';
-                
-                // Only send photos if it's a NEW item for the user OR if they are specifically searching/asking
-                if (isNewItem || isSearch) {
-                    await sendItemPhotos(telegramId, item);
-                }
-                
+                if (analysis.intent !== 'sale') await sendItemPhotos(telegramId, item);
                 lastShownItem[telegramId] = itemId;
-                photoSent = true;
-            }
-
-            // Only start booking flow if the AI explicitly moved to 'sale' intent
-            if (analysis.intent === 'sale') {
-                userStates.set(telegramId, { step: 'name', serviceType, itemId, data: {} });
-                const promptRu = `Замечательный выбор! Как к вам можно обращаться? Напишите, пожалуйста, ваше ФИО.`;
-                const prompt = await getLocalizedText(userLangCache[telegramId] || 'ru', promptRu);
-                
-                await saveMessage(telegramId, 'assistant', finalResponse);
-                try { await ctx.reply(finalResponse, { parse_mode: 'Markdown' }); } catch (e) { await ctx.reply(finalResponse); }
-                return ctx.reply(prompt, Markup.inlineKeyboard([[Markup.button.callback('Отмена', 'cancel_stepper')]]));
             }
         }
 
-    if (!finalResponse || finalResponse.trim() === '') {
-        finalResponse = 'Извините, я задумался. Повторите, пожалуйста, ваш вопрос.';
-    }
+        if (orderMatch) {
+            const [_, type, itemId, name, date, loc, phone, price] = orderMatch;
+            const serviceType = type === 'car' ? 'car' : 'transfer';
 
-    // Mentioned item check (to show photos only if they weren't already sent)
-    if (!photoSent) {
-        const cleanText = finalResponse.toLowerCase();
-        const mentionedCar = (cars || []).find(c => 
-            (c.brand && cleanText.includes(c.brand.toLowerCase())) || 
-            (c.model && cleanText.includes(c.model.toLowerCase()))
-        );
-        
-        if (mentionedCar) {
-            lastShownItem[telegramId] = mentionedCar.id;
-            await sendItemPhotos(telegramId, mentionedCar);
-        } else {
-            const mentionedTrans = (transfers || []).find(t => 
-                cleanText.includes(t.from_location.toLowerCase()) && 
-                cleanText.includes(t.to_location.toLowerCase())
+            const item = serviceType === 'car' ? (cars || []).find(c => c.id === itemId) : (transfers || []).find(t => t.id === itemId);
+            const displayTitle = item ? (item.brand ? `${item.brand} ${item.model}` : `${item.from_location} → ${item.to_location}`) : itemId;
+
+            const { data: order } = await createRequest(
+                telegramId, displayTitle,
+                name.trim() || 'Чат-клиент', date.trim() || 'Через чат', loc.trim() || 'Через чат', 
+                parseFloat(price) || 0, { phone: phone.trim(), serviceType, itemId }
             );
-            if (mentionedTrans) {
-                lastShownItem[telegramId] = mentionedTrans.id;
-                await sendItemPhotos(telegramId, mentionedTrans);
+
+            if (order) {
+                const report = `НОВАЯ ЗАЯВКА (ЧАТ)\n\nМашина: ${esc(displayTitle)}\nКлиент: @${esc(ctx.from.username || telegramId)}\nИмя: ${esc(name)}\nТелефон: ${esc(phone)}\nДата: ${esc(date)}\nМесто: ${esc(loc)}`;
+                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+                if (managers) {
+                    for (const m of managers) {
+                        try { await bot.telegram.sendMessage(m.telegram_id, report, {
+                            ...Markup.inlineKeyboard([[Markup.button.callback('Принять', `accept_req_${order.id}`), Markup.button.callback('Отклонить', `cancel_req_${order.id}`)]])
+                        }); } catch (e) {}
+                    }
+                }
             }
         }
-    }
 
-    await saveMessage(telegramId, 'assistant', finalResponse);
-    try {
-        await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
-    } catch (err) {
-        await ctx.reply(finalResponse);
-    }
+        await saveMessage(telegramId, 'assistant', finalResponse || 'ОК');
+        try { await ctx.reply(finalResponse || 'ОК', { parse_mode: 'Markdown' }); } catch { await ctx.reply(finalResponse || 'ОК'); }
 
     } catch (error) {
-        console.error('[OpenAI Fatal Error]:', error.message);
-        if (error.response) {
-            console.error('[OpenAI Status]:', error.response.status);
-            console.error('[OpenAI Data]:', error.response.data);
-        }
-        try { 
-            const lang = userLangCache[telegramId] || 'ru';
-            const errMsgRu = 'Извините, произошла ошибка. Попробуйте чуть позже.';
-            const errMsg = await getLocalizedText(lang, errMsgRu);
-            await ctx.reply(errMsg); 
-        } catch (e) { 
-            console.error('Final fallback error:', e.message);
-        }
+        console.error('[AI CHAT ERROR]:', error.message);
+        await ctx.reply('Извините, техническая заминка. Попробуйте еще раз.');
     }
 });
 
-// Helper: send all photos of an item as album
 async function sendItemPhotos(telegramId, item) {
     const photos = (item.image_urls && Array.isArray(item.image_urls))
         ? item.image_urls.filter(url => url && url.startsWith('http'))
         : (item.image_url ? [item.image_url] : []);
-
     if (photos.length === 0) return;
-
     try {
-        if (photos.length === 1) {
-            await bot.telegram.sendPhoto(telegramId, photos[0]);
-        } else {
-            const media = photos.slice(0, 10).map(url => ({ type: 'photo', media: url }));
-            await bot.telegram.sendMediaGroup(telegramId, media);
-        }
-    } catch (e) {
-        console.warn('[MediaGroup] Error:', e.message);
-    }
+        if (photos.length === 1) await bot.telegram.sendPhoto(telegramId, photos[0]);
+        else await bot.telegram.sendMediaGroup(telegramId, photos.slice(0, 10).map(url => ({ type: 'photo', media: url })));
+    } catch (e) { console.warn('[P_ERR]:', e.message); }
 }
 
-// Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
 module.exports = bot;
