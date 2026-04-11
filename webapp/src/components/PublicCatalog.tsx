@@ -46,6 +46,7 @@ const UI_TRANSLATIONS: any = {
     placeholder_passengers: { ru: 'Пассажиров', en: 'Passengers', tr: 'Yolcular', de: 'Passagiere', pl: 'Pasażerowie', ar: 'الركاب', fa: 'مسافران' },
     confirm: { ru: 'Подтвердить', en: 'Confirm Order', tr: 'Siparişi Onayla', de: 'Bestellung bestätigen', pl: 'Potwierdź zamówienie', ar: 'تأكيد الطلب', fa: 'تایید سفارش' },
     cancel: { ru: 'Отмена', en: 'Cancel', tr: 'İptal', de: 'Abbrechen', pl: 'Anuluj', ar: 'إلغاء', fa: 'لغو' },
+    sending: { ru: 'Отправка...', en: 'Sending...', tr: 'Gönderiliyor...', de: 'Senden...', pl: 'Wysyłanie...', ar: 'جاري الإرسال...', fa: 'در حال ارسال...' },
     day: { ru: '/ день', en: '/ day', tr: '/ gün', de: '/ tag', pl: '/ dzień', ar: '/ يوم', fa: '/ روز' }
 };
 
@@ -56,6 +57,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState<any>(null);
     const [bookingItem, setBookingItem] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', phone: '', date: '', from: '', to: '', passengers: '1' });
 
     const tg = window.Telegram?.WebApp;
@@ -76,6 +78,8 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     };
 
     const handleBook = async () => {
+        if (isSubmitting) return;
+        
         if (!formData.name || !formData.phone || !formData.date || !bookingItem) {
             tg?.showAlert(currentLang === 'ru' ? 'Заполните обязательные поля' : 'Please fill all fields');
             return;
@@ -99,6 +103,8 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
         const telegramId = initDataUnsafe?.user?.id;
         const userName = initDataUnsafe?.user?.username || initDataUnsafe?.user?.first_name || 'WebAppUser';
 
+        setIsSubmitting(true);
+
         try {
             await fetch('/api/book', {
                 method: 'POST',
@@ -112,7 +118,10 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
             console.error('Booking failed:', e);
         }
 
-        setTimeout(() => tg?.close(), 100);
+        setTimeout(() => {
+            setIsSubmitting(false); // In case tg?.close() fails
+            tg?.close();
+        }, 100);
     };
 
 
@@ -170,67 +179,102 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     };
 
     return (
-        <div className="space-y-6 pb-20">
-            {/* Tabs */}
-            <div className="flex p-1 bg-[#1a1a1d] rounded-2xl border border-white/5 mx-1">
-                <button 
-                    onClick={() => setServiceType('car')}
-                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${serviceType === 'car' ? 'bg-primary text-on-primary shadow-lg' : 'text-slate-400'}`}
-                >
-                    {t('car_rental')}
-                </button>
-                <button 
-                    onClick={() => setServiceType('transfer')}
-                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${serviceType === 'transfer' ? 'bg-primary text-on-primary shadow-lg' : 'text-slate-400'}`}
-                >
-                    {t('transfers')}
-                </button>
+        <div className="space-y-6 pb-20 px-2 animate-in fade-in duration-500">
+            {/* Premium segmented control */}
+            <div className="sticky top-0 z-50 pt-2 pb-4 bg-[#0f0f11]/80 backdrop-blur-xl">
+                <div className="relative flex p-1 bg-[#1a1a1d]/60 backdrop-blur-md rounded-2xl border border-white/5 mx-1 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                    <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl bg-primary shadow-lg transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${serviceType === 'car' ? 'translate-x-0' : 'translate-x-[calc(100%+8px)]'}`} />
+                    <button 
+                        onClick={() => setServiceType('car')}
+                        className={`relative flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-colors duration-300 z-10 flex items-center justify-center gap-2 ${serviceType === 'car' ? 'text-on-primary' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">directions_car</span>
+                        {t('car_rental')}
+                    </button>
+                    <button 
+                        onClick={() => setServiceType('transfer')}
+                        className={`relative flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-colors duration-300 z-10 flex items-center justify-center gap-2 ${serviceType === 'transfer' ? 'text-on-primary' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">route</span>
+                        {t('transfers')}
+                    </button>
+                </div>
             </div>
 
             {/* List */}
             <div className="grid grid-cols-1 gap-6">
                 {serviceType === 'car' ? cars.map(car => (
-                    <div key={car.id} onClick={() => setSelectedItem(car)} className="bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all cursor-pointer">
-                        <div className="relative aspect-[16/10]">
-                            <img src={car.image_url || car.image_urls?.[0]} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase border border-white/10 flex items-center gap-1.5 shadow-lg">
+                    <div key={car.id} onClick={() => setSelectedItem(car)} className="group relative bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/[0.08] shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer hover:shadow-primary/10">
+                        {/* Glow effect behind the card */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                        
+                        <div className="relative aspect-[16/10] overflow-hidden">
+                            <img src={car.image_url || car.image_urls?.[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1d] via-[#1a1a1d]/20 to-transparent" />
+                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-xl px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase border border-white/10 flex items-center gap-2 shadow-lg">
                                 <FlagIcon country={car.city} />
                                 {car.city}
                             </div>
                         </div>
-                        <div className="p-6">
-                            <h3 className="text-xl font-black text-white">{car.brand} {car.model}</h3>
-                            <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
-                                {getItemField(car, 'body_style')} • {getItemField(car, 'transmission')}
-                            </p>
-                            <div className="flex items-center justify-between mt-4">
-                                <div className="text-primary font-black text-2xl">${car.price_per_day} <span className="text-xs text-slate-500 font-normal">{t('day')}</span></div>
-                                <button className="bg-white/5 px-4 py-2 rounded-xl text-[10px] font-bold uppercase text-white border border-white/5">Details</button>
+                        <div className="p-6 pt-2 relative z-10">
+                            <h3 className="text-2xl font-black text-white tracking-tight">{car.brand} <span className="font-medium text-slate-300">{car.model}</span></h3>
+                            {getItemField(car, 'body_style') && (
+                                <div className="flex gap-2 mt-3">
+                                    <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-[9px] uppercase tracking-widest text-slate-400 font-bold flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[12px] text-primary">directions_car</span>
+                                        {getItemField(car, 'body_style')}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex items-end justify-between mt-6">
+                                <div>
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">От</p>
+                                    <div className="text-primary font-black text-3xl leading-none">${car.price_per_day} <span className="text-xs text-slate-500 font-bold">{t('day')}</span></div>
+                                </div>
+                                <div className="w-12 h-12 rounded-2xl bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/20 group-hover:bg-primary-light transition-colors">
+                                    <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 )) : transfers.map(t_item => (
-                    <div key={t_item.id} onClick={() => setSelectedItem(t_item)} className="bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all cursor-pointer">
+                    <div key={t_item.id} onClick={() => setSelectedItem(t_item)} className="group relative bg-gradient-to-br from-[#1a1a1d] to-[#141416] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer">
                         {t_item.image_url && (
-                             <div className="relative aspect-[16/8]">
-                                 <img src={t_item.image_url} className="w-full h-full object-cover" alt="" />
+                             <div className="relative aspect-[16/7] overflow-hidden">
+                                 <img src={t_item.image_url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
+                                 <div className="absolute inset-0 bg-gradient-to-t from-[#141416] to-transparent opacity-80" />
                              </div>
                         )}
-                        <div className="p-6 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1 text-center">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase">{t('placeholder_from')}</p>
-                                    <p className="font-bold text-white leading-tight">{getItemField(t_item, 'from_location')}</p>
+                        <div className="p-6 relative z-10">
+                            {/* Route Visualizer */}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="flex-1 bg-black/40 border border-white/5 rounded-2xl p-4 text-center relative overflow-hidden backdrop-blur-md">
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-2xl" />
+                                    <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase flex items-center justify-center gap-1 mb-1">
+                                        <span className="material-symbols-outlined text-[14px]">flight_land</span> {t('placeholder_from')}
+                                    </p>
+                                    <p className="font-bold text-white text-sm">{getItemField(t_item, 'from_location')}</p>
                                 </div>
-                                <div className="text-primary">→</div>
-                                <div className="flex-1 text-center">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase">{t('placeholder_to')}</p>
-                                    <p className="font-bold text-white leading-tight">{getItemField(t_item, 'to_location')}</p>
+                                <div className="flex-shrink-0 flex items-center justify-center relative">
+                                    <div className="absolute w-[60px] h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent dashed-line opacity-50" />
+                                    <div className="w-8 h-8 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center z-10">
+                                        <span className="material-symbols-outlined text-primary text-[14px]">moving</span>
+                                    </div>
+                                </div>
+                                <div className="flex-1 bg-black/40 border border-white/5 rounded-2xl p-4 text-center relative overflow-hidden backdrop-blur-md">
+                                    <div className="absolute top-0 left-0 w-16 h-16 bg-purple-500/10 rounded-full blur-2xl" />
+                                    <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase flex items-center justify-center gap-1 mb-1">
+                                        <span className="material-symbols-outlined text-[14px]">pin_drop</span> {t('placeholder_to')}
+                                    </p>
+                                    <p className="font-bold text-white text-sm">{getItemField(t_item, 'to_location')}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                <p className="text-xs text-slate-400">{t_item.car_type}</p>
-                                <p className="text-xl font-black text-primary">${t_item.price}</p>
+                            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                <div className="flex items-center gap-2 text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                    <span className="material-symbols-outlined text-[16px]">airport_shuttle</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">{t_item.car_type}</span>
+                                </div>
+                                <div className="text-3xl font-black text-primary">${t_item.price}</div>
                             </div>
                         </div>
                     </div>
@@ -238,59 +282,106 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
             </div>
 
             {selectedItem && (
-                <div className="fixed inset-0 z-[100] bg-[#0f0f11] overflow-y-auto p-6">
-                     <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white border border-white/5 z-10">
-                         <span className="material-symbols-outlined">close</span>
-                     </button>
-                     <img src={selectedItem.image_url || selectedItem.image_urls?.[0]} className="w-full aspect-video object-cover rounded-3xl mb-6 shadow-2xl" alt="" />
-                     <h2 className="text-3xl font-black text-white mb-2">
-                        {serviceType === 'car' ? `${selectedItem.brand} ${selectedItem.model}` : `${getItemField(selectedItem, 'from_location')} → ${getItemField(selectedItem, 'to_location')}`}
-                     </h2>
-
-                     {serviceType === 'transfer' && (
-                        <div className="flex items-center gap-2 mb-4 bg-white/5 p-2 rounded-xl border border-white/5">
-                            <span className="material-symbols-outlined text-primary text-sm tracking-widest uppercase">AirportShuttle</span>
-                            <span className="text-xs text-slate-300 font-bold tracking-widest uppercase">{selectedItem.car_type} • ${selectedItem.price}</span>
-                        </div>
-                     )}
-
-                     <p className="text-slate-400 text-sm leading-relaxed mb-8">{getItemField(selectedItem, 'description') || (currentLang === 'ru' ? 'Описание скоро появится...' : 'Description coming soon...')}</p>
-                     
-                     <div className="sticky bottom-4">
-                        <button 
-                            onClick={() => { setBookingItem(selectedItem); setSelectedItem(null); }}
-                            className="w-full bg-primary text-on-primary py-5 rounded-3xl font-black uppercase text-sm shadow-xl active:scale-95 transition-all"
-                        >
-                            {t('book_now')}
+                <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#0f0f11] animate-in slide-in-from-bottom-full duration-500">
+                    <div className="relative min-h-[50vh]">
+                        <img src={selectedItem.image_url || selectedItem.image_urls?.[0]} className="w-full h-[50vh] object-cover" alt="" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f11] via-[#0f0f11]/60 to-transparent" />
+                        <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 w-12 h-12 bg-black/40 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/10 z-10 hover:bg-white/10 transition-colors">
+                            <span className="material-symbols-outlined">close</span>
                         </button>
+                    </div>
+                    
+                    <div className="px-6 -mt-16 relative z-20 pb-32">
+                        <h2 className="text-4xl font-black text-white tracking-tight mb-2 flex flex-col">
+                            {serviceType === 'car' ? (
+                                <>
+                                    <span>{selectedItem.brand}</span>
+                                    <span className="text-slate-300 font-medium text-3xl">{selectedItem.model}</span>
+                                </>
+                            ) : (
+                                <span className="text-2xl">{getItemField(selectedItem, 'from_location')} → {getItemField(selectedItem, 'to_location')}</span>
+                            )}
+                        </h2>
+
+                        {serviceType === 'transfer' && (
+                            <div className="flex items-center gap-3 mt-6 bg-white/5 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
+                                <span className="material-symbols-outlined text-primary mb-1">airport_shuttle</span>
+                                <div>
+                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Класс авто</p>
+                                    <p className="text-sm text-slate-200 font-bold uppercase">{selectedItem.car_type}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-8 bg-[#1a1a1d] p-6 rounded-[32px] border border-white/5 shadow-xl">
+                            <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-3">{currentLang === 'ru' ? 'Об автомобиле' : 'About Vehicle'}</h4>
+                            <p className="text-slate-300 text-sm leading-relaxed">{getItemField(selectedItem, 'description') || (currentLang === 'ru' ? 'Описание скоро появится...' : 'Description coming soon...')}</p>
+                        </div>
+                    </div>
+                     
+                     <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0f0f11] via-[#0f0f11] to-transparent z-30 pt-10">
+                        <div className="max-w-md mx-auto flex items-center gap-4 bg-[#1a1a1d]/90 backdrop-blur-2xl p-2 pl-6 rounded-[32px] border border-white/10 shadow-2xl">
+                            <div className="flex-shrink-0">
+                                <span className="text-xs text-slate-500 block font-bold mb-0.5 tracking-widest">{serviceType === 'car' ? t('day') : 'Price'}</span>
+                                <span className="text-3xl font-black text-white">${serviceType === 'car' ? selectedItem.price_per_day : selectedItem.price}</span>
+                            </div>
+                            <button 
+                                onClick={() => { setBookingItem(selectedItem); setSelectedItem(null); }}
+                                className="flex-1 bg-primary text-black py-4 rounded-3xl font-black uppercase text-sm tracking-widest shadow-xl active:scale-95 transition-all hover:brightness-110 flex items-center justify-center gap-2"
+                            >
+                                {t('book_now')} <span className="material-symbols-outlined text-[18px]">verified</span>
+                            </button>
+                        </div>
                      </div>
                 </div>
             )}
 
             {bookingItem && (
                 <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setBookingItem(null)} />
-                    <div className="relative w-full max-w-sm bg-[#1a1a1d] rounded-[32px] p-8 border border-white/5 shadow-2xl space-y-6">
-                        <h4 className="text-xl font-black text-white text-center">
-                            {t('booking_form')}
-                        </h4>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in" onClick={() => setBookingItem(null)} />
+                    <div className="relative w-full max-w-sm bg-gradient-to-b from-[#222226] to-[#1a1a1d] rounded-[36px] p-6 border border-white/10 shadow-[0_0_60px_-15px_rgba(255,255,255,0.1)] space-y-6 animate-in slide-in-from-bottom-8">
+                        <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-2" />
+                        
+                        <div className="text-center">
+                            <h4 className="text-xl font-black text-white">{t('booking_form')}</h4>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mt-1">Оставьте контактные данные</p>
+                        </div>
                         
                         <div className="space-y-4">
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                            <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_date')} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                            <div className="relative group">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">person</span>
+                                <input className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 transition-colors placeholder:text-slate-600" placeholder={t('placeholder_name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                            </div>
+                            <div className="relative group">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">call</span>
+                                <input className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 transition-colors placeholder:text-slate-600" placeholder={t('placeholder_phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                            </div>
+                            <div className="relative group">
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">calendar_month</span>
+                                <input className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 transition-colors placeholder:text-slate-600" placeholder={t('placeholder_date')} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                            </div>
+                            
                             {serviceType === 'transfer' && (
-                                <>
-                                    <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_from')} value={formData.from} onChange={e => setFormData({...formData, from: e.target.value})} />
-                                    <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_to')} value={formData.to} onChange={e => setFormData({...formData, to: e.target.value})} />
-                                    <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_passengers')} value={formData.passengers} onChange={e => setFormData({...formData, passengers: e.target.value})} />
-                                </>
+                                <div className="space-y-4 pt-2 border-t border-white/5">
+                                    <div className="flex gap-2">
+                                        <input className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 placeholder:text-slate-600 delay-100" placeholder={t('placeholder_from')} value={formData.from} onChange={e => setFormData({...formData, from: e.target.value})} />
+                                        <span className="material-symbols-outlined text-primary self-center">east</span>
+                                        <input className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 placeholder:text-slate-600 delay-100" placeholder={t('placeholder_to')} value={formData.to} onChange={e => setFormData({...formData, to: e.target.value})} />
+                                    </div>
+                                    <div className="relative group">
+                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">group</span>
+                                        <input type="number" min="1" max="10" className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 transition-colors placeholder:text-slate-600" placeholder={t('placeholder_passengers')} value={formData.passengers} onChange={e => setFormData({...formData, passengers: e.target.value})} />
+                                    </div>
+                                </div>
                             )}
                         </div>
 
-                        <div className="flex gap-3 pt-2">
-                             <button onClick={() => setBookingItem(null)} className="flex-1 py-4 bg-white/5 text-slate-400 rounded-2xl text-xs font-bold uppercase">{t('cancel')}</button>
-                             <button onClick={handleBook} className="flex-1 py-4 bg-primary text-on-primary rounded-2xl text-[10px] font-black uppercase shadow-lg active:scale-95 transition-all">{t('confirm')}</button>
+                        <div className="flex gap-2 pt-4">
+                             <button onClick={() => setBookingItem(null)} disabled={isSubmitting} className={`w-1/3 py-4 bg-white/5 text-slate-400 rounded-2xl text-[10px] tracking-widest font-bold uppercase transition-all ${isSubmitting ? 'opacity-50' : 'hover:bg-white/10'}`}>{t('cancel')}</button>
+                             <button onClick={handleBook} disabled={isSubmitting} className={`flex-1 py-4 ${isSubmitting ? 'bg-primary/50' : 'bg-primary'} text-black rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] active:scale-95 transition-all flex justify-center items-center gap-2`}>
+                                 {isSubmitting ? <span className="material-symbols-outlined animate-spin text-[16px]">sync</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
+                                 {isSubmitting ? t('sending') : t('confirm')}
+                             </button>
                         </div>
                     </div>
                 </div>
@@ -298,3 +389,4 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
         </div>
     );
 }
+

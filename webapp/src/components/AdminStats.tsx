@@ -16,33 +16,9 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
     const [payoutMsg, setPayoutMsg] = useState<{ [id: number]: string }>({});
     const [requests, setRequests] = useState<any[]>([]);
     const [reqLoading, setReqLoading] = useState(false);
+    const [reqFilter, setReqFilter] = useState<'all'|'new'>('new');
 
-    const getFlag = (searchStr: string) => {
-        if (!searchStr) return '';
-        const s = searchStr.toLowerCase();
-        if (s.includes('turk') || s.includes('турц')) return '🇹🇷';
-        if (s.includes('viet') || s.includes('вьет')) return '🇻🇳';
-        if (s.includes('thai') || s.includes('таи')) return '🇹🇭';
-        if (s.includes('indo') || s.includes('индо')) return '🇮🇩';
-        if (s.includes('kazakh') || s.includes('казах')) return '🇰🇿';
-        if (s.includes('azer') || s.includes('азер')) return '🇦🇿';
-        if (s.includes('georg') || s.includes('груз')) return '🇬🇪';
-        if (s.includes('usa') || s.includes('сша')) return '🇺🇸';
-        if (s.includes('germ') || s.includes('герм')) return '🇩🇪';
-        if (s.includes('egypt') || s.includes('егип')) return '🇪🇬';
-        if (s.includes('china') || s.includes('кита')) return '🇨🇳';
-        if (s.includes('korea') || s.includes('коре')) return '🇰🇷';
-        if (s.includes('japan') || s.includes('япон')) return '🇯🇵';
-        if (s.includes('monten') || s.includes('черног')) return '🇲🇪';
-        if (s.includes('serb') || s.includes('серб')) return '🇷🇸';
-        if (s.includes('euro') || s.includes('евро')) return '🇪🇺';
-        if (s.includes('isra') || s.includes('изра')) return '🇮🇱';
-        if (s.includes('saudi') || s.includes('сауд')) return '🇸🇦';
-        if (s.includes('dubai') || s.includes('uae') || s.includes('оаэ') || s.includes('emir')) return '🇦🇪';
-        if (s.includes('russia') || s.includes('россия') || s.includes('рф') || s === 'ru' || s === 'rus') return '🇷🇺';
-        if (s.includes('ukraine') || s.includes('украин')) return '🇺🇦';
-        return '';
-    };
+
 
     useEffect(() => { 
         fetchAll(); 
@@ -58,7 +34,11 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
 
     const fetchAll = async () => {
         setLoading(true);
-        await Promise.all([fetchStats(), fetchReferralRows(), fetchManagers()]);
+        if (isAdmin) {
+            await Promise.all([fetchStats(), fetchReferralRows(), fetchManagers()]);
+        } else {
+            await fetchStats();
+        }
         setLoading(false);
     };
 
@@ -221,8 +201,7 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
     const fetchRequests = async () => {
         setReqLoading(true);
         const { data } = await supabase.from('requests').select('*, users(username, referrer_id)').order('created_at', { ascending: false }).limit(200);
-        const filteredRequests = data || [];
-        setRequests(filteredRequests);
+        setRequests(data || []);
         setReqLoading(false);
     };
 
@@ -245,48 +224,105 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
     if (loading) return <div className="text-center py-20 opacity-50 animate-pulse">{t.analyzing || 'Анализ данных...'}</div>;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-white/10 to-transparent p-[1px] rounded-[2rem] overflow-hidden shadow-lg">
+                    <div className="bg-black/40 backdrop-blur-md p-5 h-full rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-[40px] group-hover:bg-blue-500/20 transition-all -z-10" />
+                        <span className="material-symbols-outlined text-blue-400 mb-2 block">group</span>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{t.statsTotalUsers}</p>
+                        <p className="text-3xl font-black text-white">{stats.totalUsers}</p>
+                    </div>
+                </div>
+                <div className="bg-gradient-to-br from-white/10 to-transparent p-[1px] rounded-[2rem] overflow-hidden shadow-lg">
+                    <div className="bg-black/40 backdrop-blur-md p-5 h-full rounded-[2rem] border border-white/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-[40px] group-hover:bg-green-500/20 transition-all -z-10" />
+                        <span className="material-symbols-outlined text-green-400 mb-2 block">receipt_long</span>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{t.statsTotalRequests}</p>
+                        <p className="text-3xl font-black text-white">{stats.totalRequests}</p>
+                    </div>
+                </div>
+                {isAdmin && (
+                    <div className="col-span-2 bg-gradient-to-r from-primary/20 to-primary/5 p-[1px] rounded-[2rem] overflow-hidden shadow-lg shadow-primary/5">
+                        <div className="bg-black/40 backdrop-blur-xl p-5 sm:p-6 h-full rounded-[2rem] relative overflow-hidden group flex justify-between items-center">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/10 rounded-full blur-[60px] group-hover:bg-primary/20 transition-all -z-10" />
+                            <div>
+                                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{t.statsRevenue}</p>
+                                <p className="text-4xl sm:text-5xl font-black text-white">${stats.totalRevenue.toLocaleString()}</p>
+                            </div>
+                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 flex-shrink-0 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                                <span className="material-symbols-outlined text-[32px] text-primary relative z-10">monitoring</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* New requests alert */}
+            {stats.newRequests > 0 && (
+                <div className="bg-gradient-to-r from-blue-500/20 to-transparent p-[1px] rounded-[1.5rem] overflow-hidden">
+                    <div className="bg-[#121214] p-4 rounded-[1.5rem] border border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse">
+                                <span className="material-symbols-outlined text-blue-400 text-[18px]">notifications_active</span>
+                            </div>
+                            <p className="text-xs font-bold text-blue-100 uppercase tracking-wide">{t.statsNewRequests}</p>
+                        </div>
+                        <span className="bg-blue-500 text-black text-[11px] font-black px-3 py-1 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]">{stats.newRequests}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Manager Management */}
             {isAdmin && (
-                <div className="bg-[#1a1a1d] p-5 rounded-3xl border border-white/5 space-y-4">
-                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-secondary text-[18px]">manage_accounts</span>
-                        {t.manageManagers || 'Управление Менеджерами'}
-                    </h3>
-                    <div className="space-y-4">
-                        <div className="flex gap-3">
-                            <div className="flex-1 relative">
-                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">fingerprint</span>
-                                <input
-                                    type="text"
-                                    value={newManagerId}
-                                    onChange={e => setNewManagerId(e.target.value)}
-                                    placeholder={t.enterTgId || 'Telegram ID'}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-primary/50 transition-all placeholder:text-slate-600"
-                                />
+                <div className="bg-gradient-to-b from-white/[0.05] to-transparent p-[1px] rounded-[2rem] overflow-hidden">
+                    <div className="bg-black/60 backdrop-blur-md p-6 rounded-[2rem] border border-white/5 space-y-5">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-secondary/10 rounded-2xl flex items-center justify-center border border-secondary/20 shadow-[0_0_20px_rgba(var(--secondary-rgb),0.1)]">
+                                <span className="material-symbols-outlined text-secondary text-[20px]">manage_accounts</span>
                             </div>
-                            <button onClick={handleAddManager} className="px-6 py-4 bg-primary text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all active:scale-95 flex items-center gap-2">
-                                {t.assignEmployee || 'Добавить'}
-                            </button>
+                            <div>
+                                <h3 className="text-lg font-black text-white tracking-tight">{t.manageManagers || 'Команда'}</h3>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest">Управление доступом</p>
+                            </div>
                         </div>
+                        <div className="space-y-4 bg-white/[0.02] p-4 rounded-[1.5rem] border border-white/5">
+                            <div className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">fingerprint</span>
+                                    <input
+                                        type="text"
+                                        value={newManagerId}
+                                        onChange={e => setNewManagerId(e.target.value)}
+                                        placeholder={t.enterTgId || 'Telegram ID'}
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-white outline-none focus:border-secondary/50 transition-all placeholder:text-slate-600 shadow-inner"
+                                    />
+                                </div>
+                                <button onClick={handleAddManager} className="px-6 py-4 bg-secondary/10 text-secondary border border-secondary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-secondary/20 transition-all active:scale-95 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px]">add</span>
+                                </button>
+                            </div>
 
-                        <div className="flex items-center gap-4 bg-surface-container-lowest/50 p-2 px-3 rounded-lg border border-outline-variant/10 bg-black/20">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Роль для назначения:</span>
-                            <div className="flex gap-2 flex-1">
-                                <button 
-                                    onClick={() => setNewManagerRole('manager')}
-                                    className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${newManagerRole === 'manager' ? 'bg-secondary/20 text-secondary border border-secondary/30' : 'bg-white/5 text-slate-500'}`}
-                                >
-                                    {t.selectManager || 'Manager'}
-                                </button>
-                                <button 
-                                    onClick={() => setNewManagerRole('admin')}
-                                    className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${newManagerRole === 'admin' ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-slate-500'}`}
-                                >
-                                    {t.selectAdmin || 'Admin'}
-                                </button>
+                            <div className="flex items-center gap-3 p-3 rounded-2xl border border-white/5 bg-black/40">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Уровень:</span>
+                                <div className="flex gap-2 flex-1">
+                                    <button 
+                                        onClick={() => setNewManagerRole('manager')}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${newManagerRole === 'manager' ? 'bg-secondary text-black shadow-secondary/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                                    >
+                                        {t.selectManager || 'Manager'}
+                                    </button>
+                                    <button 
+                                        onClick={() => setNewManagerRole('admin')}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm ${newManagerRole === 'admin' ? 'bg-primary text-black shadow-primary/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                                    >
+                                        {t.selectAdmin || 'Admin'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+
 
                         <div className="relative">
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">edit_note</span>
@@ -345,7 +381,7 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                                             </div>
                                         )}
                                         {m.role !== 'founder' && (
-                                            <button onClick={() => handleRemoveManager(m.telegram_id)} className="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center border border-red-500/20">
+                                            <button onClick={() => handleRemoveManager(m.telegram_id)} className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center justify-center border border-red-500/20 active:scale-95 ml-1">
                                                 <span className="material-symbols-outlined text-[18px]">person_remove</span>
                                             </button>
                                         )}
@@ -355,37 +391,11 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                         </div>
                     )}
                 </div>
-            )}
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#1a1a1d] p-5 rounded-3xl border border-white/5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{t.statsTotalUsers}</p>
-                    <p className="text-3xl font-black text-white">{stats.totalUsers}</p>
-                </div>
-                <div className="bg-[#1a1a1d] p-5 rounded-3xl border border-white/5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">{t.statsTotalRequests}</p>
-                    <p className="text-3xl font-black text-white">{stats.totalRequests}</p>
-                </div>
-                <div className="bg-primary/10 p-5 rounded-3xl border border-primary/20 col-span-2">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{t.statsRevenue}</p>
-                    <p className="text-4xl font-black text-white">${stats.totalRevenue.toLocaleString()}</p>
-                </div>
             </div>
-
-            {/* New requests alert */}
-            {stats.newRequests > 0 && (
-                <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-blue-400">notifications_active</span>
-                        <p className="text-xs font-bold text-blue-100 uppercase tracking-wide">{t.statsNewRequests}</p>
-                    </div>
-                    <span className="bg-blue-500 text-black text-[10px] font-black px-3 py-1 rounded-full">{stats.newRequests}</span>
-                </div>
-            )}
+        )}
 
             {/* Referral Analytics + Payouts */}
-            {referralRows.length > 0 && (
+            {isAdmin && referralRows.length > 0 && (
                 <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 overflow-hidden">
                     <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[18px]">payments</span>
@@ -453,18 +463,19 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                                 </div>
 
                                 {/* Action row */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mt-4">
                                     <button
                                         onClick={() => handlePayout(ref)}
                                         disabled={ref.balance <= 0}
-                                        className="flex-1 py-2.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex-1 py-3 bg-gradient-to-r from-green-500/20 to-green-500/10 text-green-400 border border-green-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all hover:border-green-500/50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
                                     >
+                                        <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
                                         {t.refPayoutBtn} ${ref.balance}
                                     </button>
                                     {ref.totalPaid > 0 && (
-                                        <div className="px-3 py-2.5 bg-black/20 rounded-xl text-center min-w-[80px]">
-                                            <p className="text-[10px] font-black text-slate-400">${ref.totalPaid.toFixed(0)}</p>
-                                            <p className="text-[8px] text-slate-600 uppercase">{t.refPaid}</p>
+                                        <div className="px-4 py-2.5 bg-black/40 border border-white/5 rounded-2xl text-center min-w-[90px]">
+                                            <p className="text-xs font-black text-slate-300 tracking-tight">${ref.totalPaid.toFixed(0)}</p>
+                                            <p className="text-[8px] text-slate-600 uppercase font-bold tracking-widest mt-0.5">{t.refPaid}</p>
                                         </div>
                                     )}
                                 </div>
@@ -535,48 +546,153 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                 </div>
             )}
 
-            {/* Dashboard / Recent Requests */}
-            <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 overflow-hidden">
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
-                        <h3 className="text-sm font-bold text-slate-200">{t.recentRequests}</h3>
-                    </div>
-                    <button onClick={fetchRequests} className="text-[10px] font-black text-primary uppercase tracking-widest">{t.refresh}</button>
-                </div>
-                <div className="p-2 space-y-2">
-                    {reqLoading ? <div className="text-center py-4 opacity-50">...</div> : requests.length === 0 ? <p className="text-center py-4 text-xs text-slate-500">{t.noRequests}</p> : requests.map(req => (
-                        <div key={req.id} className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-3">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>
-                                            {req.status.toUpperCase()}
-                                        </span>
-                                        <span className="text-[9px] font-black text-primary/60 uppercase">{req.service_type}</span>
-                                    </div>
-                                    <h4 className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
-                                        <span>{getFlag(req.excursion_title || '') || '📍'}</span>
-                                        {req.excursion_title || 'Заявка'}
-                                    </h4>
-                                </div>
-                                <p className="text-primary font-bold">${req.price_usd || 0}</p>
+            {/* Detailed Requests Section */}
+            <div className="bg-gradient-to-b from-white/[0.05] to-transparent p-[1px] rounded-[2rem] overflow-hidden">
+                <div className="bg-[#121214] rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl">
+                    <div className="px-6 py-5 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/40">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]">
+                                <span className="material-symbols-outlined text-primary text-[24px]">receipt_long</span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                                <p className="text-slate-400">@{req.users?.username || 'user'}</p>
-                                <p className="text-slate-500">{new Date(req.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <div className="flex gap-2 pt-2 border-t border-white/5">
-                                <button onClick={() => updateStatus(req.id, 'contacted')} className="flex-1 py-2 text-[9px] font-black bg-yellow-500/10 text-yellow-500 rounded-lg uppercase">{t.statusContacted}</button>
-                                <button onClick={() => updateStatus(req.id, 'done')} className="flex-1 py-2 text-[9px] font-black bg-green-500/10 text-green-500 rounded-lg uppercase">{t.statusDone}</button>
+                            <div>
+                                <h3 className="text-lg font-black text-white tracking-tight">Панель заявок</h3>
+                                <p className="text-[10px] text-primary uppercase tracking-widest font-bold">Очередь обработки</p>
                             </div>
                         </div>
-                    ))}
+                    <div className="flex items-center gap-2 bg-black/20 p-1.5 rounded-2xl border border-white/5">
+                        <button
+                            onClick={() => setReqFilter('new')}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'new' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-slate-400 hover:bg-white/5 disabled:opacity-50'}`}
+                        >
+                            Активные ({requests.filter(r => r.status === 'new' || r.status === 'contacted').length})
+                        </button>
+                        <button
+                            onClick={() => setReqFilter('all')}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'all' ? 'bg-slate-700/50 text-slate-200 border border-slate-600/50' : 'text-slate-400 hover:bg-white/5 disabled:opacity-50'}`}
+                        >
+                            Все
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-4 space-y-4">
+                    {reqLoading ? <div className="text-center py-10 opacity-50"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto"></div></div> : 
+                    requests.filter(req => reqFilter === 'all' || (reqFilter === 'new' && (req.status === 'new' || req.status === 'contacted'))).length === 0 ? 
+                    <div className="text-center py-12 bg-black/20 rounded-2xl border border-dashed border-white/10">
+                        <span className="material-symbols-outlined text-[40px] text-slate-600 mb-2">inbox</span>
+                        <p className="text-sm font-bold text-slate-400">{t.noRequests}</p>
+                    </div> 
+                    : requests.filter(req => reqFilter === 'all' || (reqFilter === 'new' && (req.status === 'new' || req.status === 'contacted'))).map(req => {
+                        const meta = req.meta_data || {};
+                        const isTransfer = req.service_type === 'transfer';
+                        const isCar = req.service_type === 'car';
+
+                        return (
+                            <div key={req.id} className="bg-gradient-to-br from-black/40 to-[#121214] p-5 rounded-3xl border border-white/5 space-y-4 shadow-lg">
+                                {/* Header */}
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm ${getStatusStyle(req.status)}`}>
+                                                {req.status === 'new' ? 'НОВАЯ' : req.status === 'contacted' ? 'СВЯЗАЛСЯ' : req.status === 'done' ? 'ГОТОВО' : 'ОТМЕНЕНА'}
+                                            </span>
+                                            <span className="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
+                                                <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                                {new Date(req.created_at).toLocaleString('ru-RU', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'})}
+                                            </span>
+                                            <span className="text-[10px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">{req.service_type || 'car'}</span>
+                                        </div>
+                                        <h4 className="font-bold text-slate-100 text-lg sm:text-xl leading-tight">
+                                            {isTransfer ? `${meta.from || '---'} ⟶ ${meta.to || '---'}` : (req.excursion_title || t.recentRequests)}
+                                        </h4>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        <p className="text-3xl font-black text-primary tracking-tighter">${req.price_usd}</p>
+                                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Ожидаемо</p>
+                                    </div>
+                                </div>
+
+                                {/* Body stats */}
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <div className="bg-black/30 p-3.5 rounded-2xl border border-white/[0.03]">
+                                        <p className="text-slate-500 mb-2 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
+                                            <span className="material-symbols-outlined text-[12px]">person</span> {t.client}
+                                        </p>
+                                        <p className="font-bold text-slate-200 truncate">@{req.users?.username || 'user'}</p>
+                                        <p className="text-slate-400 mt-1 text-xs truncate">{req.full_name}</p>
+                                        <div className="mt-2 text-[10px]">
+                                            {meta.phone && <a href={`https://wa.me/${meta.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="text-green-400 hover:underline flex items-center gap-1 font-mono">
+                                                <span className="material-symbols-outlined text-[12px]">chat</span> {meta.phone}
+                                            </a>}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-black/30 p-3.5 rounded-2xl border border-white/[0.03]">
+                                        <p className="text-slate-500 mb-2 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
+                                            <span className="material-symbols-outlined text-[12px]">info</span> Детали заказа
+                                        </p>
+                                        {isTransfer ? (
+                                            <div className="space-y-1 text-xs text-slate-300">
+                                                <p className="flex justify-between"><span>Океан/Дата:</span> <span className="font-bold text-white">{req.tour_date || meta.date || '—'}</span></p>
+                                                <p className="flex justify-between"><span>Людей:</span> <span className="font-bold text-white">{meta.passengers || '—'}</span></p>
+                                            </div>
+                                        ) : isCar ? (
+                                            <div className="space-y-1 text-xs text-slate-300">
+                                                <p className="flex justify-between"><span>Авто:</span> <span className="font-bold text-white truncate max-w-[100px]">{req.excursion_title}</span></p>
+                                                <p className="flex justify-between"><span>Дата:</span> <span className="font-bold text-white">{req.tour_date || meta.date || '—'}</span></p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1 text-xs text-slate-300">
+                                                <p className="flex justify-between"><span>Дата:</span> <span className="font-bold text-white">{req.tour_date || '—'}</span></p>
+                                                <p className="flex justify-between"><span>Отель:</span> <span className="font-bold text-white truncate max-w-[100px]">{req.hotel_name || '—'}</span></p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {req.comment && (
+                                    <div className="bg-blue-500/5 p-3 rounded-2xl border border-blue-500/10 flex gap-2 items-start mt-2">
+                                        <span className="material-symbols-outlined text-blue-400 text-[16px] mt-0.5">format_quote</span>
+                                        <p className="text-blue-200/80 text-[11px] font-medium italic">
+                                            {req.comment}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                                    <button 
+                                        onClick={() => updateStatus(req.id, 'contacted')} 
+                                        className="flex-1 min-w-[100px] py-3 text-[10px] font-black bg-yellow-500/10 text-yellow-500 rounded-xl hover:bg-yellow-500/20 active:scale-95 transition-all uppercase tracking-widest border border-yellow-500/20 flex items-center justify-center gap-1"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">support_agent</span>
+                                        Взят в работу
+                                    </button>
+                                    <button 
+                                        onClick={() => updateStatus(req.id, 'done')} 
+                                        className="flex-1 min-w-[100px] py-3 text-[10px] font-black bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500/20 active:scale-95 transition-all uppercase tracking-widest border border-green-500/20 flex items-center justify-center gap-1"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                                        Сделка закрыта
+                                    </button>
+                                    <button 
+                                        onClick={() => updateStatus(req.id, 'cancelled')} 
+                                        className="flex-shrink-0 w-12 py-3 bg-red-500/5 text-red-500 rounded-xl hover:bg-red-500/10 active:scale-95 transition-all border border-red-500/10 flex items-center justify-center"
+                                        title="Отменить заказ"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
+        </div>
 
         </div>
     );
 };
 
 export default AdminStats;
+

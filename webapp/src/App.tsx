@@ -4,7 +4,6 @@ import AdminStats from './components/AdminStats';
 import AdminFleet from './components/AdminFleet';
 import AdminFaq from './components/AdminFaq';
 import AdminExcursions from './components/AdminExcursions';
-import AdminRequests from './components/AdminRequests';
 import WithdrawModal from './components/WithdrawModal';
 import PublicCatalog from './components/PublicCatalog';
 
@@ -402,7 +401,7 @@ const App: React.FC = () => {
   const [loginInputId, setLoginInputId] = useState('');
   const [lang, setLang] = useState<'ru' | 'en' | 'tr' | 'de' | 'pl' | 'ar' | 'fa'>('ru');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'fleet' | 'faq' | 'catalog' | 'excursions' | 'requests'>('catalog');
+  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'fleet' | 'faq' | 'catalog' | 'excursions'>('catalog');
   const [referralStats, setReferralStats] = useState({ invited: 0, requests: 0, earned: 0 });
   const [referralDetails, setReferralDetails] = useState<any[]>([]);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -692,7 +691,6 @@ if (loading) return (
       case 'stats': return <AdminStats t={t} isAdmin={isAdmin} />;
       case 'fleet': return <AdminFleet t={t} />;
       case 'excursions': return <AdminExcursions t={t} />;
-      case 'requests': return <AdminRequests t={t} />;
       case 'faq': return <AdminFaq t={t} />;
       case 'catalog': return <PublicCatalog t={t} lang={lang} />;
       default: return null;
@@ -783,26 +781,15 @@ if (loading) return (
         </button>
 
         {isManagement && (
-          <>
-            <button
-                onClick={() => setActiveTab('requests')}
-                className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'requests' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-                }`}
-            >
-                <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'requests' ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
-                <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabRequests}</span>
-            </button>
-            <button
-                onClick={() => setActiveTab('stats')}
-                className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-                activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-                }`}
-            >
-                <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
-                <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
-            </button>
-          </>
+          <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
+              activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
+              }`}
+          >
+              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+              <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
+          </button>
         )}
 
         {isAdmin && (

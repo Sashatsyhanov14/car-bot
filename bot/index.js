@@ -37,6 +37,40 @@ bot.use(async (ctx, next) => {
     return next();
 });
 
+const FOLLOWUP_DELAY_MS = 2 * 60 * 1000; // 2 minutes
+function scheduleFollowUpMessage(telegramId, lang) {
+    setTimeout(async () => {
+        const text = `Спасибо за ваш интерес и уделённое время! 🙏
+Желаем вам захватывающих поездок! 🚗
+
+Ваша заявка уже у нас — оператор свяжется с вами для подтверждения всех деталей в ближайшее время. Ваша аренда или трансфер пройдут безупречно! 🗺️
+
+Рекомендуем также установить основное приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7 🤖
+
+В приложении eMedeo вы сможете:
+• Забронировать авторские экскурсии 🗺️
+• Арендовать автомобиль, трансфер или жильё 🏡
+• Купить eSIM для интернета 📱
+• Заказать юридические и консультационные услуги ⚖️
+
+— eMedeo: Мир без посредников —
+
+Мы всегда на связи — техническая поддержка 24/7 💬
+
+Скачать наше приложение:
+📱 Android: https://play.google.com/store/apps/details?id=com.emedeo.codeware
+🍏 iOS: https://apps.apple.com/app/emedeo/id6738978452`;
+
+        try {
+            // Localize if needed, disable preview so it looks clean
+            const finalMsg = lang === 'ru' ? text : await getLocalizedText(lang, text);
+            await bot.telegram.sendMessage(telegramId, finalMsg, { disable_web_page_preview: true });
+        } catch (e) {
+            console.error('[FOLLOWUP_ERROR] could not send to', telegramId, e.message);
+        }
+    }, FOLLOWUP_DELAY_MS);
+}
+
 // --- MANAGER ACTIONS ---
 bot.action(/^accept_req_(.+)$/, async (ctx) => {
     const requestId = ctx.match[1];
@@ -190,6 +224,9 @@ async function processBooking(telegramId, userName, lang, data) {
                         }); 
                     } catch (e) { console.error(`[MANAGER_NOTIFY_ERROR] to ${mId}:`, e.message); }
                 }
+                
+                // Trigger 2-minute follow-up
+                scheduleFollowUpMessage(telegramId, lang || 'ru');
             }
             return { success: true, order, error: insErr };
         }
@@ -207,10 +244,10 @@ async function handleWebAppData(ctx, dataStr) {
         const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
         const result = await processBooking(telegramId, ctx.from.username, lang, data);
         if (result.success && !result.error) {
-            const successMsg = await getLocalizedText(lang, 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время.');
+            const successMsg = await getLocalizedText(lang, 'Ваша заявка успешно принята! Наш менеджер свяжется с вами в ближайшее время для подтверждения всех деталей.');
             return ctx.reply(successMsg);
         } else {
-            return ctx.reply('Ошибка при сохранении заявки. Попробуйте еще раз.');
+            return ctx.reply('К сожалению, при сохранении заявки произошла ошибка. Пожалуйста, попробуйте еще раз.');
         }
     } catch (e) { console.error('[WEBAPP_DATA] Error:', e.message); }
 }
@@ -271,7 +308,7 @@ bot.on('text', async (ctx) => {
         
         const bookMatch = finalMessage.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         const langMatch = finalMessage.match(/\[LANG:\s*([a-z]{2})\]/i);
-        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*date:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
+        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*loc:(.*?)\s*\|\s*date:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
         
         let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').replace(/\[ORDER_READY:.*?\]/gi, '').trim();
 
@@ -293,8 +330,9 @@ bot.on('text', async (ctx) => {
             }
         }
 
+        let orderPlaced = false;
         if (orderMatch) {
-            const [_, type, itemId, name, date, phone, price] = orderMatch;
+            const [_, type, itemId, name, loc, date, phone, price] = orderMatch;
             const serviceType = type === 'car' ? 'car' : 'transfer';
 
             const item = serviceType === 'car' ? (cars || []).find(c => c.id === itemId) : (transfers || []).find(t => t.id === itemId);
@@ -310,15 +348,16 @@ bot.on('text', async (ctx) => {
 
             const { data: order, error: reqErr } = await createRequest(
                 telegramId, displayTitle, 
-                name.trim() || 'Чат-клиент', date.trim() || 'Через чат', 'В чате', 
+                name.trim() || 'Чат-клиент', date.trim() || 'Через чат', loc.trim() || 'В чате', 
                 parseFloat(price) || 0, { phone: phone.trim(), serviceType, itemId },
                 user?.referrer_id || null
             );
 
             if (order && order.id) {
                 const savedOrderId = order.id;
+                orderPlaced = true;
                 const ai = lastAnalysis[telegramId] || { temperature: 'Warm', notes: 'Заявка из чата', tip: 'Уточните детали бронирования' };
-                const report = `🚀 **NEW BOOKING REQUEST!** [ЧАТ]\n\n🚗 **Авто**: ${esc(displayTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(String(name || '').trim())}\n📅 **Date**: ${esc(String(date || '').trim())}\n📍 **Место**: В чате\n📞 **WhatsApp**: ${esc(String(phone || '').trim())}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
+                const report = `🚀 **NEW BOOKING REQUEST!** [ЧАТ]\n\n🚗 **Авто**: ${esc(displayTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(String(name || '').trim())}\n📅 **Date**: ${esc(String(date || '').trim())}\n📍 **Место**: ${esc(String(loc || '').trim())}\n📞 **WhatsApp**: ${esc(String(phone || '').trim())}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
                 
                 const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager', 'admin']);
                 const recipientIds = new Set(managers?.map(m => m.telegram_id).filter(id => !!id) || []);
@@ -335,17 +374,24 @@ bot.on('text', async (ctx) => {
                         }); 
                     } catch (e) { console.error(`[MANAGER_NOTIFY_CHAT_ERROR] to ${mId}:`, e.message); }
                 }
+
+                // Trigger 2-minute follow-up
+                const chatLang = userLangCache[telegramId] || 'ru';
+                scheduleFollowUpMessage(telegramId, chatLang);
             } else {
                 console.error('[ORDER_FAILED] order was null or missing id for', telegramId, 'Error:', reqErr?.message);
             }
         }
 
         await saveMessage(telegramId, 'assistant', finalResponse || 'ОК');
+        if (orderPlaced) {
+            await saveMessage(telegramId, 'assistant', '[СИСТЕМА: Заявка успешно оформлена. Цикл бронирования завершен. Теперь отвечай на новые вопросы или подбирай новые авто с нуля. Не проси данные для старой заявки.]');
+        }
         try { await ctx.reply(finalResponse || 'ОК', { parse_mode: 'Markdown' }); } catch { await ctx.reply(finalResponse || 'ОК'); }
 
     } catch (error) {
         console.error('[AI CHAT FATAL ERROR]:', error.message);
-        await ctx.reply('Извините, техническая заминка. Попробуйте еще раз.');
+        await ctx.reply('Приносим извинения, возникла небольшая техническая заминка. Пожалуйста, попробуйте отправить сообщение еще раз.');
     }
 });
 
