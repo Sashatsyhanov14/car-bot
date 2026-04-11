@@ -612,102 +612,103 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                         const isCar = req.service_type === 'car';
 
                         return (
-                            <div key={req.id} className="bg-gradient-to-br from-black/40 to-[#121214] p-5 rounded-3xl border border-white/5 space-y-4 shadow-lg">
-                                {/* Header */}
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="space-y-2 flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border shadow-sm ${getStatusStyle(req.status)}`}>
-                                                {req.status === 'new' ? 'НОВАЯ' : req.status === 'contacted' ? 'СВЯЗАЛСЯ' : req.status === 'done' ? 'ГОТОВО' : 'ОТМЕНЕНА'}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
-                                                <span className="material-symbols-outlined text-[12px]">schedule</span>
-                                                {new Date(req.created_at).toLocaleString('ru-RU', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'})}
-                                            </span>
-                                            <span className="text-[10px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">{req.service_type || 'car'}</span>
-                                        </div>
-                                        <h4 className="font-bold text-slate-100 text-lg sm:text-xl leading-tight">
-                                            {isTransfer ? `${meta.from || '---'} ⟶ ${meta.to || '---'}` : (req.excursion_title || t.recentRequests)}
-                                        </h4>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <p className="text-3xl font-black text-primary tracking-tighter">${req.price_usd}</p>
-                                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Ожидаемо</p>
-                                    </div>
-                                </div>
-
-                                {/* Body stats */}
-                                <div className="grid grid-cols-2 gap-3 mt-4">
-                                    <div className="bg-black/30 p-3.5 rounded-2xl border border-white/[0.03]">
-                                        <p className="text-slate-500 mb-2 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
-                                            <span className="material-symbols-outlined text-[12px]">person</span> {t.client}
-                                        </p>
-                                        <p className="font-bold text-slate-200 truncate">@{req.users?.username || 'user'}</p>
-                                        <p className="text-slate-400 mt-1 text-xs truncate">{req.full_name}</p>
-                                        <div className="mt-2 text-[10px]">
-                                            {meta.phone && <a href={`https://wa.me/${meta.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="text-green-400 hover:underline flex items-center gap-1 font-mono">
-                                                <span className="material-symbols-outlined text-[12px]">chat</span> {meta.phone}
-                                            </a>}
+                            <details key={req.id} className="group bg-gradient-to-br from-black/40 to-[#121214] rounded-2xl border border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.5)] overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                                <summary className="p-3.5 cursor-pointer flex justify-between items-center gap-3 hover:bg-white/[0.02] transition-colors outline-none list-none">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <span className={`flex-shrink-0 text-[9px] font-black px-2 py-1 rounded-md border shadow-sm ${getStatusStyle(req.status)}`}>
+                                            {req.status === 'new' ? 'НОВАЯ' : req.status === 'contacted' ? 'СВЯЗАЛСЯ' : req.status === 'done' ? 'ГОТОВО' : 'ОТМЕНА'}
+                                        </span>
+                                        <div className="min-w-0 leading-tight">
+                                            <h4 className="font-bold text-slate-200 text-[13px] truncate">
+                                                {isTransfer ? `${meta.from || '---'} ⟶ ${meta.to || '---'}` : (req.excursion_title || t.recentRequests)}
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5 whitespace-nowrap">
+                                                {req.full_name} · {new Date(req.created_at).toLocaleString('ru-RU', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'})}
+                                            </p>
                                         </div>
                                     </div>
-                                    
-                                    <div className="bg-black/30 p-3.5 rounded-2xl border border-white/[0.03]">
-                                        <p className="text-slate-500 mb-2 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
-                                            <span className="material-symbols-outlined text-[12px]">info</span> Детали заказа
-                                        </p>
-                                        {isTransfer ? (
-                                            <div className="space-y-1 text-xs text-slate-300">
-                                                <p className="flex justify-between"><span>Океан/Дата:</span> <span className="font-bold text-white">{req.tour_date || meta.date || '—'}</span></p>
-                                                <p className="flex justify-between"><span>Людей:</span> <span className="font-bold text-white">{meta.passengers || '—'}</span></p>
+                                    <div className="text-right flex items-center gap-2 flex-shrink-0">
+                                        <div className="text-right">
+                                            <p className="text-sm font-black text-primary">${req.price_usd}</p>
+                                            <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold hidden sm:block">Сумма</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-slate-600 transition-transform group-open:rotate-180 text-[20px] ml-1">expand_more</span>
+                                    </div>
+                                </summary>
+                                
+                                <div className="p-4 pt-1 border-t border-white/5 relative bg-black/20">
+                                    {/* Body stats */}
+                                    <div className="grid grid-cols-2 gap-3 mt-3">
+                                        <div className="bg-[#121214]/80 p-3 rounded-xl border border-white/[0.03]">
+                                            <p className="text-slate-500 mb-1.5 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
+                                                <span className="material-symbols-outlined text-[12px]">person</span> {t.client}
+                                            </p>
+                                            <p className="font-bold text-slate-200 text-xs truncate">@{req.users?.username || 'user'}</p>
+                                            <div className="mt-1.5 text-[10px]">
+                                                {meta.phone && <a href={`https://wa.me/${meta.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="text-green-400 hover:underline flex items-center gap-1 font-mono">
+                                                    <span className="material-symbols-outlined text-[12px]">chat</span> {meta.phone}
+                                                </a>}
                                             </div>
-                                        ) : isCar ? (
-                                            <div className="space-y-1 text-xs text-slate-300">
-                                                <p className="flex justify-between"><span>Авто:</span> <span className="font-bold text-white truncate max-w-[100px]">{req.excursion_title}</span></p>
-                                                <p className="flex justify-between"><span>Дата:</span> <span className="font-bold text-white">{req.tour_date || meta.date || '—'}</span></p>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-1 text-xs text-slate-300">
-                                                <p className="flex justify-between"><span>Дата:</span> <span className="font-bold text-white">{req.tour_date || '—'}</span></p>
-                                                <p className="flex justify-between"><span>Отель:</span> <span className="font-bold text-white truncate max-w-[100px]">{req.hotel_name || '—'}</span></p>
-                                            </div>
-                                        )}
+                                        </div>
+                                        
+                                        <div className="bg-[#121214]/80 p-3 rounded-xl border border-white/[0.03]">
+                                            <p className="text-slate-500 mb-1.5 flex items-center gap-1 uppercase font-black tracking-widest text-[9px]">
+                                                <span className="material-symbols-outlined text-[12px]">info</span> Детали заказа
+                                            </p>
+                                            {isTransfer ? (
+                                                <div className="space-y-1 text-[11px] text-slate-300">
+                                                    <p className="flex justify-between gap-2"><span>Дата:</span> <span className="font-bold text-white text-right truncate">{req.tour_date || meta.date || '—'}</span></p>
+                                                    <p className="flex justify-between gap-2"><span>Место:</span> <span className="font-bold text-white text-right truncate">{req.hotel_name || '—'}</span></p>
+                                                </div>
+                                            ) : isCar ? (
+                                                <div className="space-y-1 text-[11px] text-slate-300">
+                                                    <p className="flex justify-between gap-2"><span>Дата:</span> <span className="font-bold text-white text-right truncate">{req.tour_date || meta.date || '—'}</span></p>
+                                                    <p className="flex justify-between gap-2"><span>Локация:</span> <span className="font-bold text-white text-right truncate max-w-[80px]">{req.hotel_name || '—'}</span></p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1 text-[11px] text-slate-300">
+                                                    <p className="flex justify-between gap-2"><span>Дата:</span> <span className="font-bold text-white text-right truncate">{req.tour_date || '—'}</span></p>
+                                                    <p className="flex justify-between gap-2"><span>Место:</span> <span className="font-bold text-white text-right truncate max-w-[80px]">{req.hotel_name || '—'}</span></p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {req.comment && (
+                                        <div className="bg-blue-500/5 p-2.5 rounded-xl border border-blue-500/10 flex gap-2 items-start mt-3">
+                                            <span className="material-symbols-outlined text-blue-400 text-[14px] mt-0.5">format_quote</span>
+                                            <p className="text-blue-200/80 text-[10px] font-medium italic">
+                                                {req.comment}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-wrap gap-1.5 pt-3 mt-3 border-t border-white/5">
+                                        <button 
+                                            onClick={() => updateStatus(req.id, 'contacted')} 
+                                            className="flex-1 min-w-[90px] py-2.5 text-[9px] font-black bg-yellow-500/10 text-yellow-500 rounded-lg hover:bg-yellow-500/20 active:scale-95 transition-all uppercase tracking-widest border border-yellow-500/20 flex items-center justify-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-[13px]">support_agent</span>
+                                            В работе
+                                        </button>
+                                        <button 
+                                            onClick={() => updateStatus(req.id, 'done')} 
+                                            className="flex-1 min-w-[90px] py-2.5 text-[9px] font-black bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 active:scale-95 transition-all uppercase tracking-widest border border-green-500/20 flex items-center justify-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-[13px]">task_alt</span>
+                                            Успех
+                                        </button>
+                                        <button 
+                                            onClick={() => updateStatus(req.id, 'cancelled')} 
+                                            className="flex-shrink-0 w-10 py-2.5 bg-red-500/5 text-red-500 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all border border-red-500/10 flex items-center justify-center"
+                                            title="Отменить заказ"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">close</span>
+                                        </button>
                                     </div>
                                 </div>
-
-                                {req.comment && (
-                                    <div className="bg-blue-500/5 p-3 rounded-2xl border border-blue-500/10 flex gap-2 items-start mt-2">
-                                        <span className="material-symbols-outlined text-blue-400 text-[16px] mt-0.5">format_quote</span>
-                                        <p className="text-blue-200/80 text-[11px] font-medium italic">
-                                            {req.comment}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
-                                    <button 
-                                        onClick={() => updateStatus(req.id, 'contacted')} 
-                                        className="flex-1 min-w-[100px] py-3 text-[10px] font-black bg-yellow-500/10 text-yellow-500 rounded-xl hover:bg-yellow-500/20 active:scale-95 transition-all uppercase tracking-widest border border-yellow-500/20 flex items-center justify-center gap-1"
-                                    >
-                                        <span className="material-symbols-outlined text-[14px]">support_agent</span>
-                                        Взят в работу
-                                    </button>
-                                    <button 
-                                        onClick={() => updateStatus(req.id, 'done')} 
-                                        className="flex-1 min-w-[100px] py-3 text-[10px] font-black bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500/20 active:scale-95 transition-all uppercase tracking-widest border border-green-500/20 flex items-center justify-center gap-1"
-                                    >
-                                        <span className="material-symbols-outlined text-[14px]">task_alt</span>
-                                        Сделка закрыта
-                                    </button>
-                                    <button 
-                                        onClick={() => updateStatus(req.id, 'cancelled')} 
-                                        className="flex-shrink-0 w-12 py-3 bg-red-500/5 text-red-500 rounded-xl hover:bg-red-500/10 active:scale-95 transition-all border border-red-500/10 flex items-center justify-center"
-                                        title="Отменить заказ"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                </div>
-                            </div>
+                            </details>
                         );
                     })}
                 </div>
