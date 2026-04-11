@@ -121,6 +121,7 @@ module.exports = {
         hotel_name: pickupLocation,
         price_usd: priceUsd, // Standardized column name
         meta_data: meta || {},
+        service_type: meta?.serviceType || null,
         referrer_id: referrerId,
         status: 'new',
         created_at: new Date().toISOString()

@@ -200,8 +200,22 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
 
     const fetchRequests = async () => {
         setReqLoading(true);
-        const { data } = await supabase.from('requests').select('*, users(username, referrer_id)').order('created_at', { ascending: false }).limit(200);
-        setRequests(data || []);
+        // Supabase might fail to join users if foreign key constraint is missing. We just fetch requests directly.
+        const { data, error } = await supabase.from('requests').select('*').order('created_at', { ascending: false }).limit(200);
+        if (error) console.error('[fetchRequests ERROR]', error.message);
+        
+        // To still show nice usernames, we can quickly fetch missing usernames separately
+        let finalData = data || [];
+        if (finalData.length > 0) {
+            const userIds = [...new Set(finalData.map((r: any) => r.user_id))];
+            const { data: usersData } = await supabase.from('users').select('telegram_id, username').in('telegram_id', userIds);
+            if (usersData) {
+                const userMap = new Map(usersData.map((u: any) => [u.telegram_id, u]));
+                finalData = finalData.map((r: any) => ({ ...r, users: userMap.get(r.user_id) }));
+            }
+        }
+        
+        setRequests(finalData);
         setReqLoading(false);
     };
 
