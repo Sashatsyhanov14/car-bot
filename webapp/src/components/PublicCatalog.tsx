@@ -75,7 +75,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
         setLoading(false);
     };
 
-    const handleBook = () => {
+    const handleBook = async () => {
         if (!formData.name || !formData.phone || !formData.date || !bookingItem) {
             tg?.showAlert(currentLang === 'ru' ? 'Заполните обязательные поля' : 'Please fill all fields');
             return;
@@ -95,9 +95,26 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
             passengers: formData.passengers
         };
 
-        tg?.sendData(JSON.stringify(data));
+        const initDataUnsafe = window.Telegram?.WebApp?.initDataUnsafe;
+        const telegramId = initDataUnsafe?.user?.id;
+        const userName = initDataUnsafe?.user?.username || initDataUnsafe?.user?.first_name || 'WebAppUser';
+
+        try {
+            await fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegramId, userName, lang: currentLang, data })
+            });
+
+            // Also try sendData as a fallback for closing mechanisms in some clients
+            tg?.sendData(JSON.stringify(data));
+        } catch (e) {
+            console.error('Booking failed:', e);
+        }
+
         setTimeout(() => tg?.close(), 100);
     };
+
 
     if (loading) return <div className="text-center p-10 text-slate-400">Loading catalog...</div>;
     

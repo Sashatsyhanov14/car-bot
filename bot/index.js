@@ -149,11 +149,8 @@ bot.on('message', async (ctx, next) => {
     return next();
 });
 
-async function handleWebAppData(ctx, dataStr) {
-    const telegramId = ctx.from?.id;
-    const lang = userLangCache[telegramId] || 'ru';
+async function processBooking(telegramId, userName, lang, data) {
     try {
-        const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
         if (data.type === 'quick_book') {
             const { itemTitle, fullName, phone, date, from, price } = data;
             
@@ -176,7 +173,7 @@ async function handleWebAppData(ctx, dataStr) {
                 const aiResponse = await getChatResponse(cars, transfers, faqText, history || [], `[CATALOG_BOOKING: ${itemTitle}]`);
                 const ai = aiResponse?.analysis?.analysis || lastAnalysis[telegramId] || { temperature: 'Warm', notes: 'Заявка из каталога', tip: 'Свяжитесь для подтверждения' };
                 
-                const report = `🚀 **NEW BOOKING REQUEST!** [КАТАЛОГ]\n\n🚗 **Авто**: ${esc(itemTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(fullName)}\n📅 **Date**: ${esc(date)}\n📍 **Место**: ${esc(from)}\n📞 **WhatsApp**: ${esc(phone)}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
+                const report = `🚀 **NEW BOOKING REQUEST!** [КАТАЛОГ]\n\n🚗 **Авто**: ${esc(itemTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(userName || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(fullName)}\n📅 **Date**: ${esc(date)}\n📍 **Место**: ${esc(from)}\n📞 **WhatsApp**: ${esc(phone)}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
                 
                 const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin', 'manager']);
                 const recipientIds = new Set(managers?.map(m => m.telegram_id).filter(id => !!id) || []);
@@ -194,8 +191,26 @@ async function handleWebAppData(ctx, dataStr) {
                     } catch (e) { console.error(`[MANAGER_NOTIFY_ERROR] to ${mId}:`, e.message); }
                 }
             }
+            return { success: true, order, error: insErr };
+        }
+        return { success: false, error: 'Unknown data type' };
+    } catch (e) {
+        console.error('[PROCESS_BOOKING] Error:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+async function handleWebAppData(ctx, dataStr) {
+    const telegramId = ctx.from?.id;
+    const lang = userLangCache[telegramId] || 'ru';
+    try {
+        const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
+        const result = await processBooking(telegramId, ctx.from.username, lang, data);
+        if (result.success && !result.error) {
             const successMsg = await getLocalizedText(lang, 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время.');
             return ctx.reply(successMsg);
+        } else {
+            return ctx.reply('Ошибка при сохранении заявки. Попробуйте еще раз.');
         }
     } catch (e) { console.error('[WEBAPP_DATA] Error:', e.message); }
 }
@@ -347,4 +362,7 @@ async function sendItemPhotos(telegramId, item) {
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+bot.processBooking = processBooking;
+bot.setUserLangCache = (id, lang) => { userLangCache[id] = lang; };
 module.exports = bot;

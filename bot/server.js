@@ -46,6 +46,34 @@ app.post('/api/send-qr', async (req, res) => {
     }
 });
 
+// API endpoint for Web App Bookings
+app.post('/api/book', async (req, res) => {
+    try {
+        const { telegramId, userName, lang, data } = req.body;
+        if (!telegramId || !data) {
+            return res.status(400).json({ success: false, error: 'Missing required fields' });
+        }
+        
+        // Cache lang to keep bot translations consistent
+        if (lang) bot.setUserLangCache(telegramId, lang);
+
+        const result = await bot.processBooking(telegramId, userName, lang, data);
+        
+        if (result.success && !result.error) {
+            // Also notify the user of success via bot
+            const { getLocalizedText } = require('./src/openai');
+            const successMsg = await getLocalizedText(lang, 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время.');
+            bot.telegram.sendMessage(telegramId, successMsg).catch(console.error);
+            return res.json({ success: true });
+        } else {
+            return res.status(500).json({ success: false, error: result.error || 'Failed to process' });
+        }
+    } catch (err) {
+        console.error('API Book Error:', err);
+        res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
 // Any other request serves the React app
 app.get('*', (req, res) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
