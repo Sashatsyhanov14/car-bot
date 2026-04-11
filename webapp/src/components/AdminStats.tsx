@@ -16,7 +16,7 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
     const [payoutMsg, setPayoutMsg] = useState<{ [id: number]: string }>({});
     const [requests, setRequests] = useState<any[]>([]);
     const [reqLoading, setReqLoading] = useState(false);
-    const [reqFilter, setReqFilter] = useState<'all'|'new'>('new');
+    const [reqFilter, setReqFilter] = useState<'all'|'new'|'done'|'cancelled'>('new');
 
 
 
@@ -559,30 +559,54 @@ const AdminStats: React.FC<{ t: any, isAdmin?: boolean }> = ({ t, isAdmin }) => 
                                 <p className="text-[10px] text-primary uppercase tracking-widest font-bold">Очередь обработки</p>
                             </div>
                         </div>
-                    <div className="flex items-center gap-2 bg-black/20 p-1.5 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-1.5 bg-black/20 p-1.5 rounded-2xl border border-white/5 overflow-x-auto custom-scrollbar whitespace-nowrap">
                         <button
                             onClick={() => setReqFilter('new')}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'new' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-slate-400 hover:bg-white/5 disabled:opacity-50'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'new' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-slate-400 hover:bg-white/5'}`}
                         >
                             Активные ({requests.filter(r => r.status === 'new' || r.status === 'contacted').length})
                         </button>
                         <button
-                            onClick={() => setReqFilter('all')}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'all' ? 'bg-slate-700/50 text-slate-200 border border-slate-600/50' : 'text-slate-400 hover:bg-white/5 disabled:opacity-50'}`}
+                            onClick={() => setReqFilter('done')}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'done' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'text-slate-400 hover:bg-white/5'}`}
                         >
-                            Все
+                            Успешные ({requests.filter(r => r.status === 'done').length})
+                        </button>
+                        <button
+                            onClick={() => setReqFilter('cancelled')}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'cancelled' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-slate-400 hover:bg-white/5'}`}
+                        >
+                            Сорванные ({requests.filter(r => r.status === 'cancelled').length})
+                        </button>
+                        <button
+                            onClick={() => setReqFilter('all')}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${reqFilter === 'all' ? 'bg-slate-700/50 text-slate-200 border border-slate-600/50' : 'text-slate-400 hover:bg-white/5'}`}
+                        >
+                            Все ({requests.length})
                         </button>
                     </div>
                 </div>
 
                 <div className="p-4 space-y-4">
                     {reqLoading ? <div className="text-center py-10 opacity-50"><div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin mx-auto"></div></div> : 
-                    requests.filter(req => reqFilter === 'all' || (reqFilter === 'new' && (req.status === 'new' || req.status === 'contacted'))).length === 0 ? 
+                    requests.filter(req => {
+                        if (reqFilter === 'all') return true;
+                        if (reqFilter === 'new') return req.status === 'new' || req.status === 'contacted';
+                        if (reqFilter === 'done') return req.status === 'done';
+                        if (reqFilter === 'cancelled') return req.status === 'cancelled';
+                        return true;
+                    }).length === 0 ? 
                     <div className="text-center py-12 bg-black/20 rounded-2xl border border-dashed border-white/10">
                         <span className="material-symbols-outlined text-[40px] text-slate-600 mb-2">inbox</span>
                         <p className="text-sm font-bold text-slate-400">{t.noRequests}</p>
                     </div> 
-                    : requests.filter(req => reqFilter === 'all' || (reqFilter === 'new' && (req.status === 'new' || req.status === 'contacted'))).map(req => {
+                    : requests.filter(req => {
+                        if (reqFilter === 'all') return true;
+                        if (reqFilter === 'new') return req.status === 'new' || req.status === 'contacted';
+                        if (reqFilter === 'done') return req.status === 'done';
+                        if (reqFilter === 'cancelled') return req.status === 'cancelled';
+                        return true;
+                    }).map(req => {
                         const meta = req.meta_data || {};
                         const isTransfer = req.service_type === 'transfer';
                         const isCar = req.service_type === 'car';
