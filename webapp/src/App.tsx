@@ -108,7 +108,9 @@ const translations: any = {
     faqTopic: "Тема / Вопрос",
     faqContent: "Ответ...",
     saveBtn: "Сохранить",
-    cancelBtn: "Отмена"
+    cancelBtn: "Отмена",
+    selectManager: "Менеджер",
+    selectAdmin: "Админ"
   },
   en: {
     adminTitle: "Admin Panel",
@@ -567,8 +569,7 @@ if (loading) return (
   }
 
   const isAdmin = user.role === 'founder' || user.role === 'admin';
-  const isManager = user.role === 'manager';
-  const isStaff = isAdmin || isManager;
+  const isManagement = isAdmin || user.role === 'manager';
   const refLink = `https://t.me/emedeorentacat_bot?start=${user.telegram_id}`;
 
   const renderContent = () => {
@@ -581,7 +582,7 @@ if (loading) return (
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[60px] -z-10" />
               <p className="text-[11px] font-black text-primary uppercase tracking-[0.2em] mb-2">{t.bonusBalance}</p>
               <h2 className="text-5xl font-black text-white mb-1">{user.balance?.toLocaleString() || '0'} <span className="text-primary">$</span></h2>
-              <p className="text-[10px] text-slate-500 mb-4">1% от каждой экскурсии вашего реферала</p>
+              <p className="text-[10px] text-slate-500 mb-4">1% от каждой услуги вашего реферала</p>
               <button
                 onClick={() => setIsWithdrawOpen(true)}
                 className="px-8 py-2.5 bg-primary/20 text-primary border border-primary/30 rounded-full text-xs font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-primary/30"
@@ -676,13 +677,8 @@ if (loading) return (
                 </div>
                 <button
                   onClick={() => {
-                    // openTelegramLink triggers the bot with a start payload — most reliable method
                     const link = `https://t.me/emedeorentacat_bot?start=getqr_${user.telegram_id}`;
-                    try {
-                      tg?.openTelegramLink(link);
-                    } catch {
-                      window.open(link, '_blank');
-                    }
+                    try { tg?.openTelegramLink(link); } catch { window.open(link, '_blank'); }
                   }}
                   className="w-full py-3 bg-primary/15 border border-primary/30 rounded-2xl text-xs font-black text-primary uppercase tracking-widest active:scale-95 transition-all hover:bg-primary/25 flex items-center justify-center gap-2"
                 >
@@ -698,8 +694,7 @@ if (loading) return (
       case 'excursions': return <AdminExcursions t={t} />;
       case 'requests': return <AdminRequests t={t} />;
       case 'faq': return <AdminFaq t={t} />;
-      case 'catalog': 
-        return <PublicCatalog t={t} lang={lang} />;
+      case 'catalog': return <PublicCatalog t={t} lang={lang} />;
       default: return null;
     }
   };
@@ -743,11 +738,16 @@ if (loading) return (
                     <button
                       key={l}
                       onClick={() => { setLang(l); setIsLangOpen(false); }}
-                      className={`w-full px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-between ${
-                        lang === l ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      className={`w-full px-4 py-3 text-left text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-between border-l-4 ${
+                        lang === l ? 'bg-primary/10 text-primary border-primary' : 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      {l}
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none">
+                          {l === 'ru' ? '🇷🇺' : l === 'en' ? '🇺🇸' : l === 'tr' ? '🇹🇷' : l === 'de' ? '🇩🇪' : l === 'pl' ? '🇵🇱' : l === 'ar' ? '🇦🇪' : '🇮🇷'}
+                        </span>
+                        <span>{l}</span>
+                      </div>
                       {lang === l && <span className="material-symbols-outlined text-[14px]">check</span>}
                     </button>
                   ))}
@@ -782,16 +782,27 @@ if (loading) return (
           <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabCatalog}</span>
         </button>
 
-        {isStaff && (
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
-              activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
-            <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
-          </button>
+        {isManagement && (
+          <>
+            <button
+                onClick={() => setActiveTab('requests')}
+                className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
+                activeTab === 'requests' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
+                }`}
+            >
+                <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'requests' ? "'FILL' 1" : "'FILL' 0" }}>receipt_long</span>
+                <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabRequests}</span>
+            </button>
+            <button
+                onClick={() => setActiveTab('stats')}
+                className={`flex flex-col items-center px-3 py-2 rounded-2xl transition-all ${
+                activeTab === 'stats' ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-slate-300'
+                }`}
+            >
+                <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+                <span className="text-[8px] font-black uppercase tracking-wider mt-0.5">{t.tabStats}</span>
+            </button>
+          </>
         )}
 
         {isAdmin && (

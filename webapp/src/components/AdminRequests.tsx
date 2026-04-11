@@ -62,13 +62,13 @@ const AdminRequests: React.FC<{ t: any }> = ({ t }) => {
                                         {req.status.toUpperCase()}
                                     </span>
                                     <span className="text-[10px] text-slate-500">{new Date(req.created_at).toLocaleString('ru-RU')}</span>
-                                    <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full">{req.service_type || 'excursion'}</span>
+                                    <span className="text-[9px] font-black text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full">{req.service_type || 'car'}</span>
                                 </div>
                                 <h4 className="font-bold text-slate-100 text-lg">
                                     {isTransfer ? `${meta.from} -> ${meta.to}` : (req.excursion_title || t.recentRequests)}
                                 </h4>
                             </div>
-                            <p className="text-primary font-bold text-lg">${req.price_rub}</p>
+                            <p className="text-primary font-bold text-lg">${req.price_usd}</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 text-xs">

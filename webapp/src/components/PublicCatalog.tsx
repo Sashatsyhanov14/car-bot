@@ -100,6 +100,52 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     };
 
     if (loading) return <div className="text-center p-10 text-slate-400">Loading catalog...</div>;
+    
+    const getFlagData = (countryName: string) => {
+        if (!countryName) return { emoji: '🏳️', code: '' };
+        const c = countryName.toLowerCase();
+        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('alanya') || c.includes('istanbul')) return { emoji: '🇹🇷', code: 'tr' };
+        if (c.includes('europ') || c.includes('европ') || c.includes('avrupa')) return { emoji: '🇪🇺', code: 'eu' };
+        if (c.includes('usa') || c.includes('сша') || c.includes('abd')) return { emoji: '🇺🇸', code: 'us' };
+        if (c.includes('thai') || c.includes('таил')) return { emoji: '🇹🇭', code: 'th' };
+        if (c.includes('viet') || c.includes('вьет')) return { emoji: '🇻🇳', code: 'vn' };
+        if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return { emoji: '🇮🇱', code: 'il' };
+        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae') || c.includes('dubai') || c.includes('uae')) return { emoji: '🇦🇪', code: 'ae' };
+        if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return { emoji: '🇪🇬', code: 'eg' };
+        if (c.includes('georg') || c.includes('груз')) return { emoji: '🇬🇪', code: 'ge' };
+        if (c.includes('armen') || c.includes('армен')) return { emoji: '🇦🇲', code: 'am' };
+        if (c.includes('kazak') || c.includes('казак')) return { emoji: '🇰🇿', code: 'kz' };
+        if (c.includes('azer') || c.includes('азер')) return { emoji: '🇦🇿', code: 'az' };
+        if (c.includes('uzbek') || c.includes('узбек')) return { emoji: '🇺🇿', code: 'uz' };
+        if (c.includes('ru') || c.includes('rus') || c.includes('рф') || c.includes('russia') || c.includes('россия')) return { emoji: '🇷🇺', code: 'ru' };
+        if (c.includes('saudi') || c.includes('сауд')) return { emoji: '🇸🇦', code: 'sa' };
+        if (c.includes('chin') || c.includes('кит')) return { emoji: '🇨🇳', code: 'cn' };
+        if (c.includes('ukraine') || c.includes('украин')) return { emoji: '🇺🇦', code: 'ua' };
+        if (c.includes('middle east') || c.includes('восток') || c.includes('орта доғу')) return { emoji: '🏜️', code: 'un' };
+        if (c.includes('asia') || c.includes('азия')) return { emoji: '🌏', code: 'un' };
+        if (c.includes('africa') || c.includes('африка')) return { emoji: '🌍', code: 'un' };
+        if (c.includes('latin') || c.includes('латин')) return { emoji: '🌎', code: 'un' };
+        return { emoji: '📍', code: '' };
+    };
+
+    const FlagIcon = ({ country }: { country: string }) => {
+        const data = getFlagData(country);
+        const flagCode = data.code || 'un'; // Fallback to UN for real flag look
+        return (
+            <img 
+                src={`https://flagcdn.com/w40/${flagCode}.png`} 
+                alt={country}
+                className="w-4 h-3 object-cover rounded-[1px] shadow-sm border border-white/10"
+                onError={(e) => {
+                    (e.target as any).style.display = 'none';
+                    const span = document.createElement('span');
+                    span.innerText = data.emoji;
+                    span.className = "text-[10px]";
+                    (e.target as any).parentNode.appendChild(span);
+                }}
+            />
+        );
+    };
 
     const getItemField = (item: any, field: string) => {
         const localized = item[`${field}_${currentLang}`];
@@ -130,7 +176,8 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                     <div key={car.id} onClick={() => setSelectedItem(car)} className="bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all cursor-pointer">
                         <div className="relative aspect-[16/10]">
                             <img src={car.image_url || car.image_urls?.[0]} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase border border-white/10">
+                            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase border border-white/10 flex items-center gap-1.5 shadow-lg">
+                                <FlagIcon country={car.city} />
                                 {car.city}
                             </div>
                         </div>
@@ -215,9 +262,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                             <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                             <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                             <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_date')} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-                            {serviceType === 'car' ? (
-                                <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_pickup')} value={formData.from} onChange={e => setFormData({...formData, from: e.target.value})} />
-                            ) : (
+                            {serviceType === 'transfer' && (
                                 <>
                                     <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_from')} value={formData.from} onChange={e => setFormData({...formData, from: e.target.value})} />
                                     <input className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-sm outline-none focus:border-primary" placeholder={t('placeholder_to')} value={formData.to} onChange={e => setFormData({...formData, to: e.target.value})} />

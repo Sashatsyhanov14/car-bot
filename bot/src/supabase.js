@@ -108,26 +108,27 @@ module.exports = {
     return { data, error };
   },
 
-  async createRequest(userId, serviceTitle, fullName, tourDate, pickupLocation, priceUsd, meta) {
-    const reqId = crypto.randomUUID();
+  async createRequest(userId, serviceTitle, fullName, tourDate, pickupLocation, priceUsd, meta, referrerId = null) {
+    const reqId = require('crypto').randomUUID();
     const { data, error } = await supabase
       .from('requests')
       .insert([{
         id: reqId,
         user_id: userId,
-        excursion_title: serviceTitle, // Using existing column for title
+        excursion_title: serviceTitle,
         full_name: fullName,
         tour_date: tourDate,
-        hotel_name: pickupLocation, // Using existing column for pickup
-        price_usd: priceUsd,
+        hotel_name: pickupLocation,
+        price_usd: priceUsd, // Standardized column name
         meta_data: meta || {},
+        referrer_id: referrerId,
         status: 'new',
         created_at: new Date().toISOString()
       }])
       .select()
       .single();
 
-    if (error) console.error('Supabase createRequest error:', error.message);
+    if (error) console.error('[DB] createRequest error:', error.message);
     return { data, error };
   }
 };

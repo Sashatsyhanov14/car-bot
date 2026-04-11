@@ -14,7 +14,8 @@ const MANAGER_ID = parseInt(process.env.MANAGER_ID);
 const userLangCache = {};
 const userQrBtnCache = {}; 
 const lastShownItem = {}; 
-const userStates = new Map(); // Legacy, kept for compatibility if needed elsewhere
+const lastAnalysis = {}; 
+const userStates = new Map();
 
 // QR keywords for detection
 const QR_KEYWORDS = ['qr', 'промокод', 'promo', 'refer', 'реферал', 'benim qr', 'qrcode'];
@@ -41,18 +42,18 @@ bot.action(/^accept_req_(.+)$/, async (ctx) => {
     const requestId = ctx.match[1];
     const managerId = ctx.from.id;
 
-    const { data: manager } = await getUser(managerId);
-    if (!manager || (manager.role !== 'founder' && manager.role !== 'manager' && manager.role !== 'admin')) {
-        return ctx.answerCbQuery('У вас нет прав.', { show_alert: true });
-    }
-
-    const { data: request } = await supabase.from('requests').select('*').eq('id', requestId).single();
-    if (!request) return ctx.answerCbQuery('Заявка не найдена.', { show_alert: true });
-    if (request.status !== 'new') return ctx.answerCbQuery('Заявка уже обработана.', { show_alert: true });
-
-    await supabase.from('requests').update({ status: 'contacted', assigned_manager: managerId }).eq('id', requestId);
-
     try {
+        const { data: manager } = await getUser(managerId);
+        if (!manager || (manager.role !== 'founder' && manager.role !== 'manager' && manager.role !== 'admin')) {
+            return ctx.answerCbQuery('У вас нет прав.', { show_alert: true });
+        }
+
+        const { data: request } = await supabase.from('requests').select('*').eq('id', requestId).single();
+        if (!request) return ctx.answerCbQuery('Заявка не найдена.', { show_alert: true });
+        if (request.status !== 'new') return ctx.answerCbQuery('Заявка уже обработана.', { show_alert: true });
+
+        await supabase.from('requests').update({ status: 'contacted', assigned_manager: managerId }).eq('id', requestId);
+
         await ctx.editMessageText(
             ctx.callbackQuery.message.text + `\n\n✅ ПРИНЯТО: @${ctx.from.username || managerId}`,
             Markup.inlineKeyboard([])
@@ -63,58 +64,31 @@ bot.action(/^accept_req_(.+)$/, async (ctx) => {
         const msg = await getLocalizedText(lang, msgRu);
         await bot.telegram.sendMessage(request.user_id, msg);
 
-    } catch (e) { console.error('Accept error:', e.message); }
-
-    await ctx.answerCbQuery('Вы приняли заявку.');
+    } catch (e) { 
+        console.error('Accept error:', e.message); 
+        await ctx.answerCbQuery('Ошибка при обработке.');
+    }
 });
 
 bot.action(/^cancel_req_(.+)$/, async (ctx) => {
     const requestId = ctx.match[1];
     const managerId = ctx.from.id;
 
-    const { data: manager } = await getUser(managerId);
-    if (!manager || (manager.role !== 'founder' && manager.role !== 'manager')) {
-        return ctx.answerCbQuery('У вас нет прав.', { show_alert: true });
-    }
-
-    await supabase.from('requests').update({ status: 'cancelled', assigned_manager: managerId }).eq('id', requestId);
-
     try {
+        const { data: manager } = await getUser(managerId);
+        if (!manager || (manager.role !== 'founder' && manager.role !== 'manager' && manager.role !== 'admin')) {
+            return ctx.answerCbQuery('У вас нет прав.', { show_alert: true });
+        }
+
+        await supabase.from('requests').update({ status: 'cancelled', assigned_manager: managerId }).eq('id', requestId);
+
         await ctx.editMessageText(
             ctx.callbackQuery.message.text + `\n\n❌ ОТКЛОНЕНО: @${ctx.from.username || managerId}`,
             Markup.inlineKeyboard([])
         );
-    } catch (e) { }
+    } catch (e) { console.error('Cancel error:', e.message); }
 
     await ctx.answerCbQuery('Заявка отклонена.');
-});
-
-// --- CLIENT ACTIONS ---
-bot.action(/^start_chat_book_(.+)$/, async (ctx) => {
-    const telegramId = ctx.from.id;
-    const itemId = ctx.match[1];
-    
-    const { data: cars } = await getCars();
-    const { data: transfers } = await getTransfers();
-    const items = [...(cars || []), ...(transfers || [])];
-    const selected = items.find(i => i.id === itemId);
-    
-    if (!selected) return ctx.answerCbQuery('Услуга не найдена.', { show_alert: true });
-
-    const lang = userLangCache[telegramId] || 'ru';
-    const msgRu = `Отличный выбор! Я помогу с бронированием. Пожалуйста, напишите ваше Имя, желаемую Дату и Телефон прямо здесь в чате.`;
-    const msg = await getLocalizedText(lang, msgRu);
-    
-    await ctx.answerCbQuery();
-    return ctx.reply(msg);
-});
-
-bot.action('cancel_stepper', async (ctx) => {
-    userStates.delete(ctx.from.id);
-    const lang = userLangCache[ctx.from.id] || 'ru';
-    const msg = await getLocalizedText(lang, 'Бронирование отменено.');
-    await ctx.answerCbQuery();
-    return ctx.editMessageText(msg);
 });
 
 // --- CORE LOGIC ---
@@ -182,24 +156,42 @@ async function handleWebAppData(ctx, dataStr) {
         const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
         if (data.type === 'quick_book') {
             const { itemTitle, fullName, phone, date, from, price } = data;
-            const orderId = crypto.randomUUID();
-            const { data: order } = await supabase.from('requests').insert([{
-                id: orderId, user_id: telegramId, excursion_title: itemTitle, full_name: fullName, 
-                tour_date: date, hotel_name: from || '—', price_usd: price || 0, status: 'new'
-            }]).select().single();
+            
+            const { data: user } = await getUser(telegramId);
+            const { data: order, error: insErr } = await createRequest(
+                telegramId, itemTitle || 'Заявка', fullName, date, from || '—', price || 0,
+                { phone, serviceType: 'car' }, user?.referrer_id || null
+            );
 
-            if (order) {
-                const reportRu = `НОВАЯ ЗАЯВКА (КАТАЛОГ)\n\nМашина: ${esc(itemTitle)}\nКлиент: ${esc(fullName)}\nТелефон: ${esc(phone)}\nДата: ${esc(date)}\nМесто: ${esc(from)}`;
-                const report = await getLocalizedText('ru', reportRu);
+            if (order && order.id) {
+                const savedOrderId = order.id;
+                // Refresh analysis for catalog bookings if possible
+                const { data: history } = await getHistory(telegramId, 5);
+                const { data: cars } = await getCars();
+                const { data: transfers } = await getTransfers();
+                const faqRows = await getFaq();
+                const faqText = faqRows?.data?.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') || '';
+                
+                // Get fresh analysis
+                const aiResponse = await getChatResponse(cars, transfers, faqText, history || [], `[CATALOG_BOOKING: ${itemTitle}]`);
+                const ai = aiResponse?.analysis?.analysis || lastAnalysis[telegramId] || { temperature: 'Warm', notes: 'Заявка из каталога', tip: 'Свяжитесь для подтверждения' };
+                
+                const report = `🚀 **NEW BOOKING REQUEST!** [КАТАЛОГ]\n\n🚗 **Авто**: ${esc(itemTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(fullName)}\n📅 **Date**: ${esc(date)}\n📍 **Место**: ${esc(from)}\n📞 **WhatsApp**: ${esc(phone)}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
+                
                 const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin', 'manager']);
-                if (managers) {
-                    for (const m of managers) {
-                        try { 
-                            await bot.telegram.sendMessage(m.telegram_id, report, {
-                                ...Markup.inlineKeyboard([[Markup.button.callback('Принять', `accept_req_${orderId}`), Markup.button.callback('Отклонить', `cancel_req_${orderId}`)]])
-                            }); 
-                        } catch (e) {}
-                    }
+                const recipientIds = new Set(managers?.map(m => m.telegram_id).filter(id => !!id) || []);
+                if (MANAGER_ID) recipientIds.add(MANAGER_ID);
+
+                for (const mId of recipientIds) {
+                    try { 
+                        await bot.telegram.sendMessage(mId, report, {
+                            parse_mode: 'Markdown',
+                            ...Markup.inlineKeyboard([
+                                [Markup.button.url('✉️ SEND MESSAGE', `tg://user?id=${telegramId}`)],
+                                [Markup.button.callback('✅ Принять', `accept_req_${savedOrderId}`), Markup.button.callback('❌ Отклонить', `cancel_req_${savedOrderId}`)]
+                            ]).resize()
+                        }); 
+                    } catch (e) { console.error(`[MANAGER_NOTIFY_ERROR] to ${mId}:`, e.message); }
                 }
             }
             const successMsg = await getLocalizedText(lang, 'Заявка отправлена. Менеджер свяжется с вами в ближайшее время.');
@@ -215,8 +207,7 @@ bot.on('text', async (ctx) => {
     // QR Keywords
     if (QR_KEYWORDS.some(kw => userText.toLowerCase().includes(kw))) {
         const lang = userLangCache[telegramId] || 'ru';
-        const botUsername = ctx.botInfo?.username || 'emedeorentacat_bot';
-        const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
+        const refLink = `https://t.me/${ctx.botInfo?.username}?start=${telegramId}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=15&bgcolor=ffffff`;
         const caption = await getLocalizedText(lang, `Ваша ссылка: \`${refLink}\` \nВаш промокод: \`${telegramId}\``);
         try { await ctx.replyWithPhoto(qrUrl, { caption, parse_mode: 'Markdown' }); } catch { await ctx.reply(caption, { parse_mode: 'Markdown' }); }
@@ -238,9 +229,14 @@ bot.on('text', async (ctx) => {
         }
     }
 
-    // AI Chat
+    // --- AI ЧАТ ---
     try {
         let { data: user } = await getUser(telegramId);
+        if (!user) {
+            const { data: newUser } = await createUser({ telegram_id: telegramId, username: ctx.from.username || ctx.from.first_name, role: 'user' });
+            user = newUser;
+        }
+
         const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
         userLangCache[telegramId] = uiLang;
 
@@ -253,11 +249,14 @@ bot.on('text', async (ctx) => {
 
         try { await ctx.sendChatAction('typing'); } catch (e) {}
 
-        const { finalMessage, analysis } = await getChatResponse(cars, transfers, faqText, history, userText);
+        const response = await getChatResponse(cars, transfers, faqText, history, userText);
+        const finalMessage = response?.finalMessage || '';
+        const analysis = response?.analysis || { intent: 'consultation' };
+        if (analysis?.analysis) lastAnalysis[telegramId] = analysis.analysis;
         
         const bookMatch = finalMessage.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         const langMatch = finalMessage.match(/\[LANG:\s*([a-z]{2})\]/i);
-        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*date:(.*?)\s*\|\s*loc:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
+        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*date:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
         
         let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').replace(/\[ORDER_READY:.*?\]/gi, '').trim();
 
@@ -274,34 +273,55 @@ bot.on('text', async (ctx) => {
             const serviceType = bookMatch[1].trim();
             const item = serviceType === 'car' ? (cars || []).find(c => c.id === itemId) : (transfers || []).find(t => t.id === itemId);
             if (item) {
-                if (analysis.intent !== 'sale') await sendItemPhotos(telegramId, item);
+                if (analysis?.intent !== 'sale') await sendItemPhotos(telegramId, item);
                 lastShownItem[telegramId] = itemId;
             }
         }
 
         if (orderMatch) {
-            const [_, type, itemId, name, date, loc, phone, price] = orderMatch;
+            const [_, type, itemId, name, date, phone, price] = orderMatch;
             const serviceType = type === 'car' ? 'car' : 'transfer';
 
             const item = serviceType === 'car' ? (cars || []).find(c => c.id === itemId) : (transfers || []).find(t => t.id === itemId);
             const displayTitle = item ? (item.brand ? `${item.brand} ${item.model}` : `${item.from_location} → ${item.to_location}`) : itemId;
 
-            const { data: order } = await createRequest(
-                telegramId, displayTitle,
-                name.trim() || 'Чат-клиент', date.trim() || 'Через чат', loc.trim() || 'Через чат', 
-                parseFloat(price) || 0, { phone: phone.trim(), serviceType, itemId }
+            // Fetch user and referrer for metadata
+            const { data: user } = await getUser(telegramId);
+            let referrerInfo = 'нет';
+            if (user?.referrer_id) {
+                const { data: referrer } = await getUser(user.referrer_id);
+                referrerInfo = referrer ? `@${referrer.username || '—'} (${referrer.telegram_id})` : `${user.referrer_id}`;
+            }
+
+            const { data: order, error: reqErr } = await createRequest(
+                telegramId, displayTitle, 
+                name.trim() || 'Чат-клиент', date.trim() || 'Через чат', 'В чате', 
+                parseFloat(price) || 0, { phone: phone.trim(), serviceType, itemId },
+                user?.referrer_id || null
             );
 
-            if (order) {
-                const report = `НОВАЯ ЗАЯВКА (ЧАТ)\n\nМашина: ${esc(displayTitle)}\nКлиент: @${esc(ctx.from.username || telegramId)}\nИмя: ${esc(name)}\nТелефон: ${esc(phone)}\nДата: ${esc(date)}\nМесто: ${esc(loc)}`;
-                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-                if (managers) {
-                    for (const m of managers) {
-                        try { await bot.telegram.sendMessage(m.telegram_id, report, {
-                            ...Markup.inlineKeyboard([[Markup.button.callback('Принять', `accept_req_${order.id}`), Markup.button.callback('Отклонить', `cancel_req_${order.id}`)]])
-                        }); } catch (e) {}
-                    }
+            if (order && order.id) {
+                const savedOrderId = order.id;
+                const ai = lastAnalysis[telegramId] || { temperature: 'Warm', notes: 'Заявка из чата', tip: 'Уточните детали бронирования' };
+                const report = `🚀 **NEW BOOKING REQUEST!** [ЧАТ]\n\n🚗 **Авто**: ${esc(displayTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(String(name || '').trim())}\n📅 **Date**: ${esc(String(date || '').trim())}\n📍 **Место**: В чате\n📞 **WhatsApp**: ${esc(String(phone || '').trim())}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
+                
+                const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager', 'admin']);
+                const recipientIds = new Set(managers?.map(m => m.telegram_id).filter(id => !!id) || []);
+                if (MANAGER_ID) recipientIds.add(MANAGER_ID);
+
+                for (const mId of recipientIds) {
+                    try { 
+                        await bot.telegram.sendMessage(mId, report, {
+                            parse_mode: 'Markdown',
+                            ...Markup.inlineKeyboard([
+                                [Markup.button.url('✉️ SEND MESSAGE', `tg://user?id=${telegramId}`)],
+                                [Markup.button.callback('✅ Принять', `accept_req_${savedOrderId}`), Markup.button.callback('❌ Отклонить', `cancel_req_${savedOrderId}`)]
+                            ])
+                        }); 
+                    } catch (e) { console.error(`[MANAGER_NOTIFY_CHAT_ERROR] to ${mId}:`, e.message); }
                 }
+            } else {
+                console.error('[ORDER_FAILED] order was null or missing id for', telegramId, 'Error:', reqErr?.message);
             }
         }
 
@@ -309,7 +329,7 @@ bot.on('text', async (ctx) => {
         try { await ctx.reply(finalResponse || 'ОК', { parse_mode: 'Markdown' }); } catch { await ctx.reply(finalResponse || 'ОК'); }
 
     } catch (error) {
-        console.error('[AI CHAT ERROR]:', error.message);
+        console.error('[AI CHAT FATAL ERROR]:', error.message);
         await ctx.reply('Извините, техническая заминка. Попробуйте еще раз.');
     }
 });
