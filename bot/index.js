@@ -165,7 +165,14 @@ bot.start(async (ctx) => {
         const lang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
         userLangCache[telegramId] = lang;
 
-        const welcomeRu = `Привет, ${username}. Я твой персональный помощник. Помогу выбрать лучший автомобиль для аренды или организовать комфортный трансфер. В какую сторону смотрим?`;
+        const welcomeRu = `Добро пожаловать в eMedeo! 🌟 Я ваш персональный менеджер по аренде транспорта. Мы поможем сделать ваше путешествие незабываемым и комфортным. 
+
+ИИ от eMedeo поможет вам:
+• Оформить трансфер 🚗
+• Арендовать автомобиль или жильё 🏡
+• Получить консультации 24/7 🤖
+
+Чем я могу вам помочь сегодня? Вы ищете автомобиль или вас интересует трансфер?`;
         const welcomeText = await getLocalizedText(lang, welcomeRu);
         const webappBtn = await getLocalizedText(lang, 'Открыть Каталог');
 

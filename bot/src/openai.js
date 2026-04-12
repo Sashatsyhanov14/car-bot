@@ -41,24 +41,28 @@ module.exports = {
             }
 
             // === АГЕНТ 2: ПОИСКОВИК (Searcher) — GPT-4o-mini ===
-            const searcherResponse = await openai.chat.completions.create({
-                model: 'openai/gpt-4o-mini',
-                messages: [
-                    { role: 'system', content: SEARCHER_PROMPT(cars || [], transfers || [], faqText) },
-                    ...history.slice(-3),
-                    { role: 'user', content: `Analyzer Search Query: ${analysis.search_query}\nIntent: ${analysis.intent}` }
-                ],
-                temperature: 0.1,
-                response_format: { type: 'json_object' }
-            });
+            let searchResults = { match_id: null, match_type: null, results_summary: 'Уже в процессе оформления.' };
+            
+            // Если мы уже в фазе продажи, нам не нужно искать новые товары (чтобы не сбивать фокус)
+            if (analysis.intent !== 'sale') {
+                const searcherResponse = await openai.chat.completions.create({
+                    model: 'openai/gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: SEARCHER_PROMPT(cars || [], transfers || [], faqText) },
+                        ...history.slice(-3),
+                        { role: 'user', content: `Analyzer Search Query: ${analysis.search_query}\nIntent: ${analysis.intent}` }
+                    ],
+                    temperature: 0.1,
+                    response_format: { type: 'json_object' }
+                });
 
-            let searchResults;
-            try {
-                searchResults = JSON.parse(searcherResponse.choices[0].message.content);
-                console.log(`[SEARCHER_OUT] Match: ${searchResults.match_type}:${searchResults.match_id} | Summary: ${searchResults.results_summary?.substring(0, 50)}...`);
-            } catch (e) {
-                console.error('[Searcher JSON Error]:', e.message);
-                searchResults = { match_id: null, match_type: null, results_summary: 'Нет подходящих вариантов.' };
+                try {
+                    searchResults = JSON.parse(searcherResponse.choices[0].message.content);
+                    console.log(`[SEARCHER_OUT] Match: ${searchResults.match_type}:${searchResults.match_id} | Summary: ${searchResults.results_summary?.substring(0, 50)}...`);
+                } catch (e) {
+                    console.error('[Searcher JSON Error]:', e.message);
+                    searchResults = { match_id: null, match_type: null, results_summary: 'Нет подходящих вариантов.' };
+                }
             }
 
             // === АГЕНТ 3: ПИСАТЕЛЬ (Writer) — GPT-4o-mini — Всегда на RU ===
@@ -66,9 +70,10 @@ module.exports = {
                 model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: WRITER_PROMPT },
+                    ...history.slice(-10), // Передаем последние 10 сообщений для контекста (важно для данных брони!)
                     {
                         role: 'user',
-                        content: `Intent: ${analysis.intent}\nSearch Results: ${searchResults.results_summary}\n\nSTRICT RULE: NO GREETINGS, NO SIGNATURES, START DIRECTLY WITH THE ANSWER.`
+                        content: `Intent: ${analysis.intent}\nSearch Results: ${searchResults.results_summary}\n\nSTRICT RULE: START DIRECTLY WITH THE ANSWER.`
                     }
                 ],
                 temperature: 0.7,
