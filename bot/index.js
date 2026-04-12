@@ -39,7 +39,9 @@ bot.use(async (ctx, next) => {
 
 const FOLLOWUP_DELAY_MS = 2 * 60 * 1000; // 2 minutes
 function scheduleFollowUpMessage(telegramId, lang) {
+    console.log(`[FOLLOWUP] Scheduled 2-minute timer for ${telegramId} (lang: ${lang})`);
     setTimeout(async () => {
+        console.log(`[FOLLOWUP] Timer triggered for ${telegramId}. Preparing message...`);
         const text = `Спасибо за ваш интерес и уделённое время! 🙏
 Желаем вам захватывающих поездок! 🚗
 
@@ -62,9 +64,9 @@ function scheduleFollowUpMessage(telegramId, lang) {
 🍏 iOS: https://apps.apple.com/app/emedeo/id6738978452`;
 
         try {
-            // Localize if needed, disable preview so it looks clean
             const finalMsg = lang === 'ru' ? text : await getLocalizedText(lang, text);
             await bot.telegram.sendMessage(telegramId, finalMsg, { disable_web_page_preview: true });
+            console.log(`[FOLLOWUP] Message successfully sent to ${telegramId}`);
         } catch (e) {
             console.error('[FOLLOWUP_ERROR] could not send to', telegramId, e.message);
         }
@@ -203,12 +205,16 @@ async function processBooking(telegramId, userName, lang, data) {
 
             if (order && order.id) {
                 const savedOrderId = order.id;
+                
+                // Trigger 2-minute follow-up IMMEDIATELY
+                scheduleFollowUpMessage(telegramId, lang || 'ru');
+
                 // Refresh analysis for catalog bookings if possible
                 const { data: history } = await getHistory(telegramId, 5);
                 const { data: cars } = await getCars();
                 const { data: transfers } = await getTransfers();
-                const faqRows = await getFaq();
-                const faqText = faqRows?.data?.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') || '';
+                const { data: faqRows } = await getFaq();
+                const faqText = faqRows?.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') || '';
                 
                 // Get fresh analysis
                 const aiResponse = await getChatResponse(cars, transfers, faqText, history || [], `[CATALOG_BOOKING: ${itemTitle}]`);
@@ -231,9 +237,6 @@ async function processBooking(telegramId, userName, lang, data) {
                         }); 
                     } catch (e) { console.error(`[MANAGER_NOTIFY_ERROR] to ${mId}:`, e.message); }
                 }
-                
-                // Trigger 2-minute follow-up
-                scheduleFollowUpMessage(telegramId, lang || 'ru');
             }
             return { success: true, order, error: insErr };
         }
@@ -315,7 +318,8 @@ bot.on('text', async (ctx) => {
         
         const bookMatch = finalMessage.match(/\[BOOK_REQUEST:\s*(car|transfer):([a-zA-Z0-9_-]+)\]/i);
         const langMatch = finalMessage.match(/\[LANG:\s*([a-z]{2})\]/i);
-        const orderMatch = finalMessage.match(/\[ORDER_READY:\s*type:(car|trans)\s*\|\s*item:([a-zA-Z0-9_-]+)\s*\|\s*name:(.*?)\s*\|\s*loc:(.*?)\s*\|\s*date:(.*?)\s*\|\s*phone:(.*?)\s*\|\s*price:(.*?)\]/i);
+        // More robust regex for ORDER_READY
+        const orderMatch = finalMessage.match(/\[ORDER_READY:.*?type:(.*?)\|.*?item:(.*?)\|.*?name:(.*?)\|.*?loc:(.*?)\|.*?date:(.*?)\|.*?phone:(.*?)\|.*?price:(.*?)\]/i);
         
         let finalResponse = finalMessage.replace(/\[BOOK_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').replace(/\[ORDER_READY:.*?\]/gi, '').trim();
 
@@ -363,6 +367,11 @@ bot.on('text', async (ctx) => {
             if (order && order.id) {
                 const savedOrderId = order.id;
                 orderPlaced = true;
+
+                // Trigger 2-minute follow-up IMMEDIATELY
+                const chatLang = userLangCache[telegramId] || 'ru';
+                scheduleFollowUpMessage(telegramId, chatLang);
+
                 const ai = lastAnalysis[telegramId] || { temperature: 'Warm', notes: 'Заявка из чата', tip: 'Уточните детали бронирования' };
                 const report = `🚀 **NEW BOOKING REQUEST!** [ЧАТ]\n\n🚗 **Авто**: ${esc(displayTitle)}\n💰 **Цена**: $${price}\n👤 **Client**: @${esc(ctx.from.username || '—')} (ID: ${telegramId})\n📝 **Full name**: ${esc(String(name || '').trim())}\n📅 **Date**: ${esc(String(date || '').trim())}\n📍 **Место**: ${esc(String(loc || '').trim())}\n📞 **WhatsApp**: ${esc(String(phone || '').trim())}\n\n🔍 **Profile analysis**:\n- Temperature: ${ai.temperature || 'Warm'}\n- Notes: ${ai.notes || '—'}\n- Manager tip: ${ai.tip || '—'}\n\n⚠️ **Confirm the request in the system!**`;
                 
@@ -381,10 +390,6 @@ bot.on('text', async (ctx) => {
                         }); 
                     } catch (e) { console.error(`[MANAGER_NOTIFY_CHAT_ERROR] to ${mId}:`, e.message); }
                 }
-
-                // Trigger 2-minute follow-up
-                const chatLang = userLangCache[telegramId] || 'ru';
-                scheduleFollowUpMessage(telegramId, chatLang);
             } else {
                 console.error('[ORDER_FAILED] order was null or missing id for', telegramId, 'Error:', reqErr?.message);
             }
