@@ -63,7 +63,7 @@ export default function AdminCars() {
             });
             if (!res.ok) throw new Error('Failed to translate');
             const translations = await res.json();
-            setFormData(prev => ({ ...prev, ...translations }));
+            setFormData((prev: any) => ({ ...prev, ...translations }));
         } catch (e: any) {
             alert('Ошибка AI перевода: ' + e.message);
         } finally {
@@ -166,7 +166,9 @@ export default function AdminCars() {
                 <div className="flex gap-3">
                     {isEditing && <button onClick={() => { setIsEditing(null); setFormData({...EMPTY_CAR}); }} className="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase text-[10px]">Cancel</button>}
                     <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Save Car</button>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center"><span className="material-symbols-outlined">add_a_photo</span></button>
+                    <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
+                        <span className="material-symbols-outlined">{uploading ? 'sync' : 'add_a_photo'}</span>
+                    </button>
                     <input ref={fileInputRef} type="file" multiple className="hidden" onChange={e => e.target.files && handleFilesSelect(e.target.files)} />
                 </div>
             </div>

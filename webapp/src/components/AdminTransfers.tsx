@@ -45,7 +45,7 @@ export default function AdminTransfers() {
             });
             if (!res.ok) throw new Error('Failed to translate');
             const translations = await res.json();
-            setFormData(prev => ({ ...prev, ...translations }));
+            setFormData((prev: any) => ({ ...prev, ...translations }));
         } catch (e: any) {
             alert('Ошибка AI перевода: ' + e.message);
         } finally {
