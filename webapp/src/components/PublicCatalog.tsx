@@ -47,7 +47,8 @@ const UI_TRANSLATIONS: any = {
     confirm: { ru: 'Подтвердить', en: 'Confirm Order', tr: 'Siparişi Onayla', de: 'Bestellung bestätigen', pl: 'Potwierdź zamówienie', ar: 'تأكيد الطلب', fa: 'تایید سفارش' },
     cancel: { ru: 'Отмена', en: 'Cancel', tr: 'İptal', de: 'Abbrechen', pl: 'Anuluj', ar: 'إلغاء', fa: 'لغو' },
     sending: { ru: 'Отправка...', en: 'Sending...', tr: 'Gönderiliyor...', de: 'Senden...', pl: 'Wysyłanie...', ar: 'جاري الإرسال...', fa: 'در حال ارسال...' },
-    day: { ru: '/ день', en: '/ day', tr: '/ gün', de: '/ tag', pl: '/ dzień', ar: '/ يوم', fa: '/ روز' }
+    day: { ru: '/ день', en: '/ day', tr: '/ gün', de: '/ tag', pl: '/ dzień', ar: '/ يوم', fa: '/ روز' },
+    search_placeholder: { ru: 'Поиск по городу...', en: 'Search by city...', tr: 'Şehre göre ara...', de: 'Suche nach Stadt...', pl: 'Szukaj według miasta...', ar: 'بحث حسب المدينة...', fa: 'جستجو بر اساس شهر...' }
 };
 
 export default function PublicCatalog({ lang }: { t: any, lang: string }) {
@@ -59,6 +60,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     const [bookingItem, setBookingItem] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', phone: '', date: '', from: '', to: '', passengers: '1' });
+    const [searchQuery, setSearchQuery] = useState('');
 
     const tg = window.Telegram?.WebApp;
     const currentLang = (lang || 'ru').toLowerCase() as string;
@@ -201,9 +203,36 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                 </div>
             </div>
 
+            {/* Premium Search Bar */}
+            <div className="px-1 -mt-2 mb-2">
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-xl group-focus-within:bg-primary/10 transition-all duration-500" />
+                    <div className="relative flex items-center bg-[#1a1a1d]/80 rounded-2xl border border-white/5 backdrop-blur-md overflow-hidden transition-all duration-300 focus-within:border-primary/30 group">
+                        <span className="material-symbols-outlined absolute left-4 text-slate-500 group-focus-within:text-primary transition-colors text-[20px]">search</span>
+                        <input 
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder={t('search_placeholder')}
+                            className="w-full bg-transparent border-none py-4 pl-12 pr-12 text-sm font-bold text-white placeholder:text-slate-600 outline-none"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-4 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* List */}
             <div className="grid grid-cols-1 gap-6">
-                {serviceType === 'car' ? cars.map(car => (
+                {serviceType === 'car' ? cars.filter(car => 
+                    !searchQuery || car.city.toLowerCase().includes(searchQuery.toLowerCase())
+                ).map(car => (
                     <div key={car.id} onClick={() => setSelectedItem(car)} className="group relative bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/[0.08] shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer hover:shadow-primary/10">
                         {/* Glow effect behind the card */}
                         <div className="absolute inset-0 bg-gradient-to-b from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -237,7 +266,11 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                             </div>
                         </div>
                     </div>
-                )) : transfers.map(t_item => (
+                )) : transfers.filter(t_item => 
+                    !searchQuery || 
+                    t_item.from_location.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    t_item.to_location.toLowerCase().includes(searchQuery.toLowerCase())
+                ).map(t_item => (
                     <div key={t_item.id} onClick={() => setSelectedItem(t_item)} className="group relative bg-gradient-to-br from-[#1a1a1d] to-[#141416] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer">
                         {t_item.image_url && (
                              <div className="relative aspect-[16/7] overflow-hidden">
