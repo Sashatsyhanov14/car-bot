@@ -74,6 +74,19 @@ app.post('/api/book', async (req, res) => {
     }
 });
 
+// AI Translation for Admin Panel
+app.post('/api/translate-admin', async (req, res) => {
+    try {
+        const { type, data } = req.body;
+        const { getMultilingualItem } = require('./src/openai');
+        const translated = await getMultilingualItem(type, data);
+        res.json(translated);
+    } catch (err) {
+        console.error('API Translate error:', err);
+        res.status(500).json({ error: 'Translation failed' });
+    }
+});
+
 // Any other request serves the React app
 app.get('*', (req, res) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');

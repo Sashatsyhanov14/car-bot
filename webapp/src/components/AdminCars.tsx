@@ -28,9 +28,10 @@ export default function AdminCars() {
     const [cars, setCars] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [_uploading, setUploading] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
     const [formData, setFormData] = useState<any>({ ...EMPTY_CAR });
     const [confirmTarget, setConfirmTarget] = useState<any>(null);
+    const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { fetchCars(); }, []);
@@ -40,6 +41,34 @@ export default function AdminCars() {
         const { data } = await supabase.from('cars').select('*').order('sort_number', { ascending: true });
         setCars(data || []);
         setLoading(false);
+    };
+
+    const handleAutoTranslate = async () => {
+        if (!formData.city && !formData.description) {
+            alert('Сначала введите город или описание на русском!');
+            return;
+        }
+        setIsTranslating(true);
+        try {
+            const res = await fetch('/api/translate-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'car', data: { 
+                    city: formData.city, 
+                    description: formData.description,
+                    body_style: formData.body_style,
+                    transmission: formData.transmission,
+                    fuel_type: formData.fuel_type
+                } })
+            });
+            if (!res.ok) throw new Error('Failed to translate');
+            const translations = await res.json();
+            setFormData(prev => ({ ...prev, ...translations }));
+        } catch (e: any) {
+            alert('Ошибка AI перевода: ' + e.message);
+        } finally {
+            setIsTranslating(false);
+        }
     };
 
     const handleFilesSelect = async (files: FileList) => {
@@ -89,7 +118,17 @@ export default function AdminCars() {
 
             {/* Form */}
             <div className="bg-[#1a1a1d] rounded-3xl border border-white/5 p-5 space-y-6">
-                <h2 className="text-sm font-bold text-slate-200">{isEditing ? 'Edit Car' : 'Add New Car'}</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-bold text-slate-200">{isEditing ? 'Edit Car' : 'Add New Car'}</h2>
+                    <button 
+                        onClick={handleAutoTranslate} 
+                        disabled={isTranslating} 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isTranslating ? 'bg-primary/20 text-primary/40' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">{isTranslating ? 'sync' : 'auto_fix'}</span>
+                        {isTranslating ? 'Translating...' : 'AI Translate (7 languages)'}
+                    </button>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-3">
                     <input placeholder="Brand" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />

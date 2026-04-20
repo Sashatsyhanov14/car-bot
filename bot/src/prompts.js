@@ -95,10 +95,30 @@ Include:
 (DO NOT USE EMOJIS)
 `;
 
+const TRANSLATOR_OBJECT_PROMPT = `
+You are a professional Multilingual Catalog Expert (Agent 5).
+Your task is to take a JSON object containing car or transfer details and translate specific fields into all supported languages: ru, en, tr, de, pl, ar, fa.
+
+Rules:
+1. Return ONLY a valid JSON object.
+2. For each input field (e.g., "city", "description"), create localized keys: "field_ru", "field_en", "field_tr", etc.
+3. Do NOT translate proper nouns like brand names unless requested. 
+4. Localize city names and descriptions naturally for each language.
+5. If the field is already provided in a specific language, use it as the source.
+6. Target languages: ru (Russian), en (English), tr (Turkish), de (German), pl (Polish), ar (Arabic), fa (Farsi).
+
+JSON Output Format Example:
+{
+  "city_ru": "...", "city_en": "...", "city_tr": "...", ...
+  "description_ru": "...", "description_en": "...", ...
+}
+`;
+
 module.exports = { 
     ANALYZER_PROMPT, 
     SEARCHER_PROMPT, 
     WRITER_PROMPT, 
     LOCALIZER_PROMPT, 
-    MANAGER_ALERTER_PROMPT 
+    MANAGER_ALERTER_PROMPT,
+    TRANSLATOR_OBJECT_PROMPT
 };

@@ -6,6 +6,7 @@ interface Car {
     brand: string;
     model: string;
     city: string;
+    city_en?: string; city_ru?: string; city_tr?: string; city_de?: string; city_pl?: string; city_ar?: string; city_fa?: string;
     price_per_day: number;
     body_style: string;
     body_style_en?: string; body_style_tr?: string; body_style_de?: string; body_style_pl?: string; body_style_ar?: string; body_style_fa?: string;
@@ -61,6 +62,35 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', phone: '', date: '', from: '', to: '', passengers: '1' });
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Common city synonyms for intelligent cross-language search (7 languages support: ru, en, tr, de, pl, ar, fa)
+    const CITY_SYNONYMS: Record<string, string[]> = {
+        'antalya': ['анталия', 'antalya', 'antalya', 'antalya', 'antalyi', 'انطاليا', 'آنتالیا'],
+        'alanya': ['аланья', 'alanya', 'alanya', 'alanya', 'alanyi', 'ألانيا', 'آلانیا'],
+        'istanbul': ['стамбул', 'istanbul', 'istanbul', 'истанбул', 'stambuł', 'إسطنبول', 'استانبول'],
+        'kemer': ['кемер', 'kemer', 'kemer', 'kemer', 'kemer', 'كيمير', 'کمر'],
+        'belek': ['белек', 'belek', 'belek', 'belek', 'belek', 'بيليك', 'بلک'],
+        'side': ['сиде', 'side', 'side', 'side', 'side', 'سيدي', 'سیده'],
+        'dubai': ['дубай', 'dubai', 'dubai', 'dubai', 'dubaj', 'دبي', 'دبی'],
+        'fethiye': ['фетхие', 'fethiye', 'fethiye', 'fethiye', 'fethiye', 'فتحية', 'فتحیه'],
+        'bodrum': ['бодрум', 'bodrum', 'bodrum', 'bodrum', 'bodrum', 'بودروم', 'بودروم'],
+        'marmaris': ['мармарис', 'marmaris', 'marmaris', 'marmaris', 'marmaris', 'مارماريس', 'مارماریس'],
+        'izmir': ['измир', 'izmir', 'izmir', 'izmir', 'izmira', 'إزمير', 'ازمیر'],
+        'ankara': ['анкара', 'ankara', 'ankara', 'ankara', 'ankara', 'أنقرة', 'آنکارا'],
+        'kas': ['каш', 'кас', 'kaş', 'kas', 'kas', 'كاش', 'کاش'],
+    };
+
+    const getSearchTerms = (query: string) => {
+        const q = query.toLowerCase().trim();
+        const terms = [q];
+        // If query is a known city, add its synonyms to search terms
+        for (const [key, synonyms] of Object.entries(CITY_SYNONYMS)) {
+            if (synonyms.includes(q) || key.includes(q)) {
+                synonyms.forEach(s => { if (!terms.includes(s)) terms.push(s); });
+            }
+        }
+        return terms;
+    };
 
     const tg = window.Telegram?.WebApp;
     const currentLang = (lang || 'ru').toLowerCase() as string;
@@ -230,9 +260,15 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
 
             {/* List */}
             <div className="grid grid-cols-1 gap-6">
-                {serviceType === 'car' ? cars.filter(car => 
-                    !searchQuery || car.city.toLowerCase().includes(searchQuery.toLowerCase())
-                ).map(car => (
+                {serviceType === 'car' ? cars.filter(car => {
+                    if (!searchQuery) return true;
+                    const terms = getSearchTerms(searchQuery);
+                    const fields = ['city', 'city_ru', 'city_en', 'city_tr', 'city_de', 'city_pl', 'city_ar', 'city_fa', 'brand', 'model'];
+                    return fields.some(f => {
+                        const val = (car as any)[f]?.toString().toLowerCase();
+                        return terms.some(t => val?.includes(t));
+                    });
+                }).map(car => (
                     <div key={car.id} onClick={() => setSelectedItem(car)} className="group relative bg-[#1a1a1d] rounded-[32px] overflow-hidden border border-white/[0.08] shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer hover:shadow-primary/10">
                         {/* Glow effect behind the card */}
                         <div className="absolute inset-0 bg-gradient-to-b from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -266,11 +302,18 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                             </div>
                         </div>
                     </div>
-                )) : transfers.filter(t_item => 
-                    !searchQuery || 
-                    t_item.from_location.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    t_item.to_location.toLowerCase().includes(searchQuery.toLowerCase())
-                ).map(t_item => (
+                )) : transfers.filter(t_item => {
+                    if (!searchQuery) return true;
+                    const terms = getSearchTerms(searchQuery);
+                    const fields = [
+                        'from_location', 'from_location_ru', 'from_location_en', 'from_location_tr', 'from_location_de', 'from_location_pl', 'from_location_ar', 'from_location_fa',
+                        'to_location', 'to_location_ru', 'to_location_en', 'to_location_tr', 'to_location_de', 'to_location_pl', 'to_location_ar', 'to_location_fa'
+                    ];
+                    return fields.some(f => {
+                        const val = (t_item as any)[f]?.toString().toLowerCase();
+                        return terms.some(t => val?.includes(t));
+                    });
+                }).map(t_item => (
                     <div key={t_item.id} onClick={() => setSelectedItem(t_item)} className="group relative bg-gradient-to-br from-[#1a1a1d] to-[#141416] rounded-[32px] overflow-hidden border border-white/5 shadow-2xl active:scale-[0.98] transition-all duration-300 cursor-pointer">
                         {t_item.image_url && (
                              <div className="relative aspect-[16/7] overflow-hidden">

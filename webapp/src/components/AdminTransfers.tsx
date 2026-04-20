@@ -13,6 +13,7 @@ export default function AdminTransfers() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [formData, setFormData] = useState<any>({ ...EMPTY_TRANS });
+    const [isTranslating, setIsTranslating] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { fetchTransfers(); }, []);
@@ -23,6 +24,33 @@ export default function AdminTransfers() {
         if (error) console.error('Fetch error:', error);
         setTransfers(data || []);
         setLoading(false);
+    };
+
+    const handleAutoTranslate = async () => {
+        if (!formData.from_location && !formData.to_location && !formData.description) {
+            alert('Сначала введите маршрут (Откуда/Куда) или описание на русском!');
+            return;
+        }
+        setIsTranslating(true);
+        try {
+            const res = await fetch('/api/translate-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'transfer', data: { 
+                    from_location: formData.from_location,
+                    to_location: formData.to_location,
+                    description: formData.description,
+                    car_type: formData.car_type
+                } })
+            });
+            if (!res.ok) throw new Error('Failed to translate');
+            const translations = await res.json();
+            setFormData(prev => ({ ...prev, ...translations }));
+        } catch (e: any) {
+            alert('Ошибка AI перевода: ' + e.message);
+        } finally {
+            setIsTranslating(false);
+        }
     };
 
     const handleFilesSelect = async (files: FileList) => {
@@ -55,7 +83,17 @@ export default function AdminTransfers() {
     return (
         <div className="space-y-6 pb-20">
             <div className="bg-[#1a1a1d] rounded-[32px] border border-white/5 p-6 space-y-5 shadow-2xl">
-                <h2 className="text-xs font-black text-primary uppercase tracking-widest">{isEditing ? 'Изменение маршрута' : 'Новый маршрут'}</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-black text-primary uppercase tracking-widest">{isEditing ? 'Изменение маршрута' : 'Новый маршрут'}</h2>
+                    <button 
+                        onClick={handleAutoTranslate} 
+                        disabled={isTranslating} 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isTranslating ? 'bg-primary/20 text-primary/40' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">{isTranslating ? 'sync' : 'auto_fix'}</span>
+                        {isTranslating ? 'Перевод...' : 'AI Перевод (7 языков)'}
+                    </button>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">

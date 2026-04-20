@@ -1,6 +1,6 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const { ANALYZER_PROMPT, SEARCHER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT } = require('./prompts');
+const { ANALYZER_PROMPT, SEARCHER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT, MANAGER_ALERTER_PROMPT, TRANSLATOR_OBJECT_PROMPT } = require('./prompts');
 const { getCars, getTransfers } = require('./supabase');
 
 const path = require('path');
@@ -164,7 +164,25 @@ ${history.slice(-5).map(h => `${h.role === 'user' ? 'Клиент' : 'Бот'}: 
             return response.choices[0].message.content.trim();
         } catch (e) {
             console.error('[getLocalizedText Error]:', e.message);
-            return russianText; // Fallback to Russian instead of throwing
+            return russianText;
+        }
+    },
+
+    async getMultilingualItem(type, itemData) {
+        try {
+            const response = await openai.chat.completions.create({
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: TRANSLATOR_OBJECT_PROMPT },
+                    { role: 'user', content: `Item Type: ${type}\nData:\n${JSON.stringify(itemData, null, 2)}` }
+                ],
+                temperature: 0.2,
+                response_format: { type: 'json_object' }
+            });
+            return JSON.parse(response.choices[0].message.content);
+        } catch (e) {
+            console.error('[getMultilingualItem Error]:', e.message);
+            return {};
         }
     }
 };
