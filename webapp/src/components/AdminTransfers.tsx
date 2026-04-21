@@ -67,9 +67,37 @@ export default function AdminTransfers() {
     };
 
     const handleSave = async () => {
+        let dataToSave = { ...formData };
+
+        // Auto-translate if localized fields are missing
+        if (!formData.from_location_en || !formData.to_location_en || !formData.description_en) {
+            setIsTranslating(true);
+            try {
+                const res = await fetch('/api/translate-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'transfer', data: { 
+                        from_location: formData.from_location,
+                        to_location: formData.to_location,
+                        description: formData.description,
+                        car_type: formData.car_type
+                    } })
+                });
+                if (res.ok) {
+                    const translations = await res.json();
+                    dataToSave = { ...dataToSave, ...translations };
+                    setFormData(dataToSave);
+                }
+            } catch (e) {
+                console.error('Auto-translation failed during save:', e);
+            } finally {
+                setIsTranslating(false);
+            }
+        }
+
         const { error } = isEditing 
-            ? await supabase.from('transfers').update(formData).eq('id', isEditing.id)
-            : await supabase.from('transfers').insert([formData]);
+            ? await supabase.from('transfers').update(dataToSave).eq('id', isEditing.id)
+            : await supabase.from('transfers').insert([dataToSave]);
         
         if (error) {
             alert('ОШИБКА СОХРАНЕНИЯ: ' + error.message + '\n\n(Скорее всего вы не добавили колонку description в базу!)');
@@ -135,7 +163,10 @@ export default function AdminTransfers() {
                 )}
 
                 <div className="flex gap-3 pt-2">
-                    <button onClick={handleSave} className="flex-1 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">СОХРАНИТЬ</button>
+                    <button onClick={handleSave} disabled={isTranslating} className={`flex-1 py-5 ${isTranslating ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary active:scale-95'} text-black rounded-3xl font-black uppercase text-xs shadow-xl transition-all flex items-center justify-center gap-2`}>
+                        {isTranslating && <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>}
+                        {isTranslating ? 'Перевод (AI)...' : 'СОХРАНИТЬ'}
+                    </button>
                     <button onClick={() => fileInputRef.current?.click()} className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center border border-white/5 active:scale-95 transition-all">
                         <span className="material-symbols-outlined text-white">{uploading ? 'sync' : 'photo_camera'}</span>
                     </button>

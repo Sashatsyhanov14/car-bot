@@ -96,9 +96,38 @@ export default function AdminCars() {
     };
 
     const handleSave = async () => {
+        let dataToSave = { ...formData };
+        
+        // Auto-translate if localized fields are missing
+        if (!formData.city_en || !formData.description_en) {
+            setIsTranslating(true);
+            try {
+                const res = await fetch('/api/translate-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'car', data: { 
+                        city: formData.city, 
+                        description: formData.description,
+                        body_style: formData.body_style,
+                        transmission: formData.transmission,
+                        fuel_type: formData.fuel_type
+                    } })
+                });
+                if (res.ok) {
+                    const translations = await res.json();
+                    dataToSave = { ...dataToSave, ...translations };
+                    setFormData(dataToSave); // Update UI state too
+                }
+            } catch (e) {
+                console.error('Auto-translation failed during save:', e);
+            } finally {
+                setIsTranslating(false);
+            }
+        }
+
         const { error } = isEditing 
-            ? await supabase.from('cars').update(formData).eq('id', isEditing.id)
-            : await supabase.from('cars').insert([formData]);
+            ? await supabase.from('cars').update(dataToSave).eq('id', isEditing.id)
+            : await supabase.from('cars').insert([dataToSave]);
         
         if (error) { alert(error.message); return; }
         setIsEditing(null);
@@ -165,7 +194,10 @@ export default function AdminCars() {
 
                 <div className="flex gap-3">
                     {isEditing && <button onClick={() => { setIsEditing(null); setFormData({...EMPTY_CAR}); }} className="flex-1 py-4 bg-white/5 rounded-2xl font-black uppercase text-[10px]">Cancel</button>}
-                    <button onClick={handleSave} className="flex-[2] py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] shadow-xl active:scale-95 transition-all">Save Car</button>
+                    <button onClick={handleSave} disabled={isTranslating} className={`flex-[2] py-4 ${isTranslating ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary active:scale-95'} text-black rounded-2xl font-black uppercase text-[10px] shadow-xl transition-all flex items-center justify-center gap-2`}>
+                        {isTranslating && <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>}
+                        {isTranslating ? 'Translating...' : (isEditing ? 'Update Car' : 'Save Car')}
+                    </button>
                     <button onClick={() => fileInputRef.current?.click()} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
                         <span className="material-symbols-outlined">{uploading ? 'sync' : 'add_a_photo'}</span>
                     </button>

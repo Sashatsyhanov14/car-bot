@@ -1,7 +1,5 @@
 const { supabase, getCars, getTransfers } = require('../src/supabase');
-const { getLocalizedText } = require('../src/openai');
-
-const TARGET_LANGS = ['en', 'tr', 'de', 'pl', 'ar', 'fa'];
+const { getMultilingualItem } = require('../src/openai');
 
 async function translateCars() {
     console.log('--- Translating Cars ---');
@@ -12,38 +10,26 @@ async function translateCars() {
     }
 
     for (const car of cars) {
-        console.log(`Processing car: ${car.brand} ${car.model} (${car.id})`);
-        const updates = {};
+        // Check if translations are missing for key fields
+        const needsTranslation = !car.city_en || !car.description_en || !car.body_style_en;
         
-        for (const lang of TARGET_LANGS) {
-            // Translate body_style
-            if (car.body_style && !car[`body_style_${lang}`]) {
-                console.log(`  Translating body_style to ${lang}...`);
-                updates[`body_style_${lang}`] = await getLocalizedText(lang, car.body_style);
-            }
-            // Translate transmission
-            if (car.transmission && !car[`transmission_${lang}`]) {
-                console.log(`  Translating transmission to ${lang}...`);
-                updates[`transmission_${lang}`] = await getLocalizedText(lang, car.transmission);
-            }
-            // Translate fuel_type
-            if (car.fuel_type && !car[`fuel_type_${lang}`]) {
-                console.log(`  Translating fuel_type to ${lang}...`);
-                updates[`fuel_type_${lang}`] = await getLocalizedText(lang, car.fuel_type);
-            }
-            // Translate description
-            if (car.description && !car[`description_${lang}`]) {
-                console.log(`  Translating description to ${lang}...`);
-                updates[`description_${lang}`] = await getLocalizedText(lang, car.description);
-            }
-        }
+        if (needsTranslation) {
+            console.log(`Processing car: ${car.brand} ${car.model} (${car.id}) - Translating...`);
+            const translations = await getMultilingualItem('car', {
+                city: car.city,
+                description: car.description,
+                body_style: car.body_style,
+                transmission: car.transmission,
+                fuel_type: car.fuel_type
+            });
 
-        if (Object.keys(updates).length > 0) {
-            const { error: updErr } = await supabase.from('cars').update(updates).eq('id', car.id);
-            if (updErr) console.error(`  Error updating car ${car.id}:`, updErr.message);
-            else console.log(`  Successfully updated car ${car.id} with ${Object.keys(updates).length} translations.`);
+            if (Object.keys(translations).length > 0) {
+                const { error: updErr } = await supabase.from('cars').update(translations).eq('id', car.id);
+                if (updErr) console.error(`  Error updating car ${car.id}:`, updErr.message);
+                else console.log(`  Successfully translated car ${car.id}.`);
+            }
         } else {
-            console.log(`  No translations needed for car ${car.id}.`);
+            console.log(`Skipping car ${car.id} - already translated.`);
         }
     }
 }
@@ -57,41 +43,36 @@ async function translateTransfers() {
     }
 
     for (const tr of transfers) {
-        console.log(`Processing transfer: ${tr.from_location} -> ${tr.to_location} (${tr.id})`);
-        const updates = {};
+        const needsTranslation = !tr.from_location_en || !tr.to_location_en || !tr.description_en;
 
-        for (const lang of TARGET_LANGS) {
-            // Translate from_location
-            if (tr.from_location && !tr[`from_location_${lang}`]) {
-                console.log(`  Translating from_location to ${lang}...`);
-                updates[`from_location_${lang}`] = await getLocalizedText(lang, tr.from_location);
-            }
-            // Translate to_location
-            if (tr.to_location && !tr[`to_location_${lang}`]) {
-                console.log(`  Translating to_location to ${lang}...`);
-                updates[`to_location_${lang}`] = await getLocalizedText(lang, tr.to_location);
-            }
-            // Translate description
-            if (tr.description && !tr[`description_${lang}`]) {
-                console.log(`  Translating description to ${lang}...`);
-                updates[`description_${lang}`] = await getLocalizedText(lang, tr.description);
-            }
-        }
+        if (needsTranslation) {
+            console.log(`Processing transfer: ${tr.from_location} -> ${tr.to_location} (${tr.id}) - Translating...`);
+            const translations = await getMultilingualItem('transfer', {
+                from_location: tr.from_location,
+                to_location: tr.to_location,
+                description: tr.description,
+                car_type: tr.car_type
+            });
 
-        if (Object.keys(updates).length > 0) {
-            const { error: updErr } = await supabase.from('transfers').update(updates).eq('id', tr.id);
-            if (updErr) console.error(`  Error updating transfer ${tr.id}:`, updErr.message);
-            else console.log(`  Successfully updated transfer ${tr.id} with ${Object.keys(updates).length} translations.`);
+            if (Object.keys(translations).length > 0) {
+                const { error: updErr } = await supabase.from('transfers').update(translations).eq('id', tr.id);
+                if (updErr) console.error(`  Error updating transfer ${tr.id}:`, updErr.message);
+                else console.log(`  Successfully translated transfer ${tr.id}.`);
+            }
         } else {
-            console.log(`  No translations needed for transfer ${tr.id}.`);
+            console.log(`Skipping transfer ${tr.id} - already translated.`);
         }
     }
 }
 
 async function main() {
-    await translateCars();
-    await translateTransfers();
-    console.log('\nAll translations completed!');
+    try {
+        await translateCars();
+        await translateTransfers();
+        console.log('\nAll database translations completed!');
+    } catch (err) {
+        console.error('Main translation error:', err);
+    }
 }
 
 main().catch(console.error);
