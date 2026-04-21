@@ -721,32 +721,38 @@ if (loading) return (
           <div className="relative">
             <button 
               onClick={() => setIsLangOpen(!isLangOpen)}
-              className="flex items-center gap-2 bg-[#1a1a1d] px-3 py-1.5 rounded-full border border-white/10 active:scale-95 transition-all shadow-lg"
+              className="flex items-center gap-2 bg-[#1a1a1d] px-3 py-2 rounded-full border border-white/10 active:scale-95 transition-all shadow-lg hover:border-primary/30"
             >
-              <span className="material-symbols-outlined text-primary text-[16px]">language</span>
+              <span className="material-symbols-outlined text-primary text-[18px]">language</span>
               <span className="text-[10px] font-black text-white uppercase tracking-wider">{lang}</span>
-              <span className={`material-symbols-outlined text-[14px] text-slate-500 transition-transform ${isLangOpen ? 'rotate-180' : ''}`}>expand_more</span>
+              <span className={`material-symbols-outlined text-[14px] text-slate-500 transition-transform duration-300 ${isLangOpen ? 'rotate-180' : ''}`}>expand_more</span>
             </button>
 
             {isLangOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />
-                <div className="absolute right-0 mt-2 w-28 bg-[#1a1a1d] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  {(['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'] as const).map((l) => (
+                <div className="fixed inset-0 z-[100]" onClick={() => setIsLangOpen(false)} />
+                <div className="absolute right-0 mt-3 w-40 bg-[#1a1a1d]/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  {([
+                    { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+                    { code: 'en', name: 'English', flag: '🇺🇸' },
+                    { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
+                    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+                    { code: 'pl', name: 'Polski', flag: '🇵🇱' },
+                    { code: 'ar', name: 'العربية', flag: '🇦🇪' },
+                    { code: 'fa', name: 'فارسی', flag: '🇮🇷' }
+                  ] as const).map((l) => (
                     <button
-                      key={l}
-                      onClick={() => { setLang(l); setIsLangOpen(false); }}
-                      className={`w-full px-4 py-3 text-left text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-between border-l-4 ${
-                        lang === l ? 'bg-primary/10 text-primary border-primary' : 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white'
+                      key={l.code}
+                      onClick={() => { setLang(l.code); setIsLangOpen(false); }}
+                      className={`w-full px-5 py-4 text-left text-[11px] font-bold uppercase tracking-widest transition-all flex items-center justify-between border-l-4 ${
+                        lang === l.code ? 'bg-primary/10 text-on-primary border-primary' : 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-base leading-none">
-                          {l === 'ru' ? '🇷🇺' : l === 'en' ? '🇺🇸' : l === 'tr' ? '🇹🇷' : l === 'de' ? '🇩🇪' : l === 'pl' ? '🇵🇱' : l === 'ar' ? '🇦🇪' : '🇮🇷'}
-                        </span>
-                        <span>{l}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg leading-none filter drop-shadow-sm">{l.flag}</span>
+                        <span className="whitespace-nowrap">{l.name}</span>
                       </div>
-                      {lang === l && <span className="material-symbols-outlined text-[14px]">check</span>}
+                      {lang === l.code && <span className="material-symbols-outlined text-[14px] text-primary">check_circle</span>}
                     </button>
                   ))}
                 </div>
