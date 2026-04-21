@@ -1,26 +1,29 @@
-const { createClient } = require('@supabase/supabase-js');
-const dotenv = require('dotenv');
-const path = require('path');
-dotenv.config({ path: path.resolve(__dirname, './.env') });
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const { supabase } = require('./src/supabase');
 
 async function inspect() {
-  const { data, error } = await supabase.from('requests').select('*').limit(1);
-  if (error) {
-    console.error('Error selecting from requests:', error.message);
-    return;
-  }
-  if (data && data.length > 0) {
-    console.log('Columns found in requests (from first row keys):', Object.keys(data[0]));
-  } else {
-    console.log('Table "requests" is empty. Cannot determine columns via select.');
-    // Try to get schema via RPC or just try known names
-    const testUsd = await supabase.from('requests').select('price_usd').limit(1);
-    console.log('price_usd test:', testUsd.error ? testUsd.error.message : 'EXISTS');
-    const testRub = await supabase.from('requests').select('price_rub').limit(1);
-    console.log('price_rub test:', testRub.error ? testRub.error.message : 'EXISTS');
-  }
+    console.log('--- DB INSPECTION START ---');
+    
+    const { data: cars, error: carErr } = await supabase.from('cars').select('*').limit(1);
+    if (carErr) {
+        console.error('Error fetching cars:', carErr);
+    } else if (cars && cars.length > 0) {
+        console.log('Columns in "cars":', Object.keys(cars[0]).join(', '));
+        console.log('Data sample (first row):', JSON.stringify(cars[0], null, 2));
+    } else {
+        console.log('"cars" table is empty or inaccessible.');
+    }
+
+    const { data: transfers, error: transErr } = await supabase.from('transfers').select('*').limit(1);
+    if (transErr) {
+        console.error('Error fetching transfers:', transErr);
+    } else if (transfers && transfers.length > 0) {
+        console.log('Columns in "transfers":', Object.keys(transfers[0]).join(', '));
+        console.log('Data sample (first row):', JSON.stringify(transfers[0], null, 2));
+    } else {
+        console.log('"transfers" table is empty or inaccessible.');
+    }
+
+    console.log('--- DB INSPECTION END ---');
 }
 
-inspect();
+inspect().catch(console.error);
