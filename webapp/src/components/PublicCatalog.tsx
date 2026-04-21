@@ -277,8 +277,8 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                             <img src={car.image_url || car.image_urls?.[0]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1d] via-[#1a1a1d]/20 to-transparent" />
                             <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-xl px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase border border-white/10 flex items-center gap-2 shadow-lg">
-                                <FlagIcon country={car.city} />
-                                {car.city}
+                                <FlagIcon country={getItemField(car, 'city')} />
+                                {getItemField(car, 'city')}
                             </div>
                         </div>
                         <div className="p-6 pt-2 relative z-10">
@@ -382,16 +382,16 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                         {serviceType === 'transfer' && (
                             <div className="flex items-center gap-3 mt-6 bg-white/5 p-4 rounded-2xl border border-white/5 backdrop-blur-md">
                                 <span className="material-symbols-outlined text-primary mb-1">airport_shuttle</span>
-                                <div>
-                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Класс авто</p>
-                                    <p className="text-sm text-slate-200 font-bold uppercase">{selectedItem.car_type}</p>
+                                <div className="flex-1">
+                                    <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{t('viewCars') === 'Машины' ? 'Класс авто' : 'Vehicle Class'}</p>
+                                    <p className="text-sm text-slate-200 font-bold uppercase">{getItemField(selectedItem, 'car_type')}</p>
                                 </div>
                             </div>
                         )}
 
                         <div className="mt-8 bg-[#1a1a1d] p-6 rounded-[32px] border border-white/5 shadow-xl">
-                            <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-3">{currentLang === 'ru' ? 'Об автомобиле' : 'About Vehicle'}</h4>
-                            <p className="text-slate-300 text-sm leading-relaxed">{getItemField(selectedItem, 'description') || (currentLang === 'ru' ? 'Описание скоро появится...' : 'Description coming soon...')}</p>
+                            <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-3">{t('aboutVehicle')}</h4>
+                            <p className="text-slate-300 text-sm leading-relaxed">{getItemField(selectedItem, 'description') || t('loading')}</p>
                         </div>
                     </div>
                      
@@ -420,7 +420,7 @@ export default function PublicCatalog({ lang }: { t: any, lang: string }) {
                         
                         <div className="text-center">
                             <h4 className="text-xl font-black text-white">{t('booking_form')}</h4>
-                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mt-1">Оставьте контактные данные</p>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mt-1">{t('bookingSubtitle')}</p>
                         </div>
                         
                         <div className="space-y-4">

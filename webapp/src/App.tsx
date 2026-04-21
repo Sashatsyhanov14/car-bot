@@ -109,7 +109,10 @@ const translations: any = {
     saveBtn: "Сохранить",
     cancelBtn: "Отмена",
     selectManager: "Менеджер",
-    selectAdmin: "Админ"
+    selectAdmin: "Админ",
+    aboutVehicle: "Об автомобиле",
+    bookingSubtitle: "Оставьте контактные данные",
+    vehicleClass: "Класс авто"
   },
   en: {
     adminTitle: "Admin Panel",
@@ -204,7 +207,10 @@ const translations: any = {
     faqTopic: "Topic / Question",
     faqContent: "Answer...",
     saveBtn: "Save",
-    cancelBtn: "Cancel"
+    cancelBtn: "Cancel",
+    aboutVehicle: "About Vehicle",
+    bookingSubtitle: "Leave your contact details",
+    vehicleClass: "Vehicle Class"
   },
   tr: {
     adminTitle: "Yönetim Paneli",
@@ -300,7 +306,10 @@ const translations: any = {
     faqTopic: "Konu / Soru",
     faqContent: "Cevap...",
     saveBtn: "Kaydet",
-    cancelBtn: "İptal"
+    cancelBtn: "İptal",
+    aboutVehicle: "Araç Hakkında",
+    bookingSubtitle: "İletişim bilgilerinizi bırakın",
+    vehicleClass: "Araç Sınıfı"
   },
   de: {
     adminTitle: "Admin-Bereich", adminSubtitle: "Globale Statistiken", tabReferral: "Empfehlung", tabStats: "Dashboard", tabExcursions: "Ausflüge", tabRequests: "Anfragen", tabFaq: "FAQ", tabCatalog: "Katalog", loading: "Laden...", bonusBalance: "Ihr Guthaben", invitedCount: "Eingeladene Freunde", requestsCount: "Anfragen gestellt", inviteTitle: "Ihr Empfehlungslink", promoLabel: "PROMO-CODE", copyBtn: "Kopieren", getQrBtn: "QR im Chat", loginTitle: "Anmeldung", loginDesc: "Geben Sie Ihre Telegram-ID ein.", loginPlaceholder: "Ihre ID", loginBtn: "Anmelden", roleFounder: "Besitzer", roleManager: "Manager", roleUser: "Kunde", ownerBadge: "Gründer", statsTotalUsers: "Gesamt Kunden", statsTotalRequests: "Gesamt Anfragen", statsRevenue: "Erwarteter Umsatz", statsNewRequests: "Neue Anfragen", refAnalytics: "Referral-Analysen & Auszahlungen", refBalance: "guthaben", refInvited: "Eingeladen", refRequests: "Anfragen", refConversion: "Umwandl.", refRevenue: "Umsatz", refPaid: "Bezahlt", refPayoutBtn: "Auszahlen", refOrders: "Bestellungen", refInvitedUsers: "Eingeladene", refHistory: "Auszahlungshistorie", recentRequests: "Aktuelle Anfragen", refresh: "Aktualisieren", noRequests: "Keine Anfragen", statusContacted: "Kontaktiert", statusDone: "Erledigt",
@@ -323,7 +332,10 @@ const translations: any = {
     addNewTransfer: "Neuer Transfer",
     deleteConfirm: "Sind Sie sicher?",
     linkCopied: "Kopiert!",
-    withdrawBtn: "Bonus abheben", manageManagers: "Manager verwalten", assignEmployee: "+ Hinzufügen", enterTgId: "Telegram-ID", activeEmployees: "Aktives Personal", managerAddError: "Nicht gefunden. Bitte /start drücken.", managerAddSuccess: "ID {id} ist jetzt Manager.", managerRemoveSuccess: "ID {id} entfernt.", managerAddFail: "Fehler.", analyzing: "Analysieren...", manageFaq: "FAQ verwalten", deleteFaqConfirm: "Löschen?", addFaq: "Hinzufügen", newFaq: "Neu", editFaq: "Bearbeiten", faqTopic: "Thema", faqContent: "Inhalt", saveBtn: "Speichern", cancelBtn: "Abbrechen"
+    withdrawBtn: "Bonus abheben", manageManagers: "Manager verwalten", assignEmployee: "+ Hinzufügen", enterTgId: "Telegram-ID", activeEmployees: "Aktives Personal", managerAddError: "Nicht gefunden. Bitte /start drücken.", managerAddSuccess: "ID {id} ist jetzt Manager.", managerRemoveSuccess: "ID {id} entfernt.", managerAddFail: "Fehler.", analyzing: "Analysieren...", manageFaq: "FAQ verwalten", deleteFaqConfirm: "Löschen?", addFaq: "Hinzufügen", newFaq: "Neu", editFaq: "Bearbeiten", faqTopic: "Thema", faqContent: "Inhalt", saveBtn: "Speichern", cancelBtn: "Abbrechen",
+    aboutVehicle: "Über das Fahrzeug",
+    bookingSubtitle: "Hinterlassen Sie Ihre Kontaktdaten",
+    vehicleClass: "Fahrzeugklasse"
   },
   pl: {
     adminTitle: "Panel Admina", adminSubtitle: "Statystyki globalne", tabReferral: "Polecenia", tabStats: "Pulpit", tabExcursions: "Wycieczki", tabRequests: "Zlecenia", tabFaq: "FAQ", tabCatalog: "Katalog", loading: "Ładowanie...", bonusBalance: "Twoje saldo", invitedCount: "Zaproszeni", requestsCount: "Złożone wnioski", inviteTitle: "Twój link polecający", promoLabel: "KOD PROMO", copyBtn: "Kopiuj", getQrBtn: "QR w czacie", loginTitle: "Logowanie", loginDesc: "Wpisz swój Telegram ID.", loginPlaceholder: "Twój ID", loginBtn: "Zaloguj", roleFounder: "Właściciel", roleManager: "Menedżer", roleUser: "Klient", ownerBadge: "Założyciel", statsTotalUsers: "Suma klientów", statsTotalRequests: "Suma wniosków", statsRevenue: "Przychód", statsNewRequests: "Nowe wnioski", refAnalytics: "Analiza poleceń i wypłaty", refBalance: "saldo", refInvited: "Zaprosił", refRequests: "Wnioski", refConversion: "Konwersja", refRevenue: "Przychód", refPaid: "Zapłacono", refPayoutBtn: "Wypłać", refOrders: "Zlecenia", refInvitedUsers: "Zaproszeni", refHistory: "Historia wypłat", recentRequests: "Ostatnie zlecenia", refresh: "Odśwież", noRequests: "Brak zleceń", statusContacted: "Kontakt", statusDone: "Gotowe",
@@ -346,7 +358,10 @@ const translations: any = {
     addNewTransfer: "Nowy Transfer",
     deleteConfirm: "Jesteś pewien?",
     linkCopied: "Skopiowano!",
-    withdrawBtn: "Wypłać bonusy", manageManagers: "Zarządzaj kadrami", assignEmployee: "+ Dodaj", enterTgId: "Telegram ID", activeEmployees: "Aktywni", managerAddError: "Nie znaleziono.", managerAddSuccess: "ID {id} jest menedżerem.", managerRemoveSuccess: "Usunięto {id}.", managerAddFail: "Błąd.", analyzing: "Analiza...", manageFaq: "Zarządzaj FAQ", deleteFaqConfirm: "Usunąć?", addFaq: "Dodaj", newFaq: "Nowy", editFaq: "Edytuj", faqTopic: "Temat", faqContent: "Treść", saveBtn: "Zapisz", cancelBtn: "Anuluj"
+    withdrawBtn: "Wypłać bonusy", manageManagers: "Zarządzaj kadrami", assignEmployee: "+ Dodaj", enterTgId: "Telegram ID", activeEmployees: "Aktywni", managerAddError: "Nie znaleziono.", managerAddSuccess: "ID {id} jest menedżerem.", managerRemoveSuccess: "Usunięto {id}.", managerAddFail: "Błąd.", analyzing: "Analiza...", manageFaq: "Zarządzaj FAQ", deleteFaqConfirm: "Usunąć?", addFaq: "Dodaj", newFaq: "Nowy", editFaq: "Edytuj", faqTopic: "Temat", faqContent: "Treść", saveBtn: "Zapisz", cancelBtn: "Anuluj",
+    aboutVehicle: "O pojedzie",
+    bookingSubtitle: "Zostaw swoje dane kontaktowe",
+    vehicleClass: "Klasa pojazdu"
   },
   ar: {
     adminTitle: "لوحة التحكم", adminSubtitle: "الإحصائيات العامة", tabReferral: "الإحالات", tabStats: "لوحة القيادة", tabExcursions: "الجولات", tabRequests: "الطلبات", tabFaq: "الأسئلة الشائعة", tabCatalog: "الكتالوج", loading: "جاري التحميل...", bonusBalance: "رصيدك", invitedCount: "الأصدقاء المدعوون", requestsCount: "الطلبات المقدمة", inviteTitle: "رابط الإحالة الخاص بك", promoLabel: "كود الخصم", copyBtn: "نسخ", getQrBtn: "احصل على QR", loginTitle: "تسجيل الدخول", loginDesc: "أدخل معرف تليجرام الخاص بك.", loginPlaceholder: "معرفك", loginBtn: "دخول", roleFounder: "المالك", roleManager: "مدير", roleUser: "عميل", ownerBadge: "مؤسس", statsTotalUsers: "إجمالي العملاء", statsTotalRequests: "إجمالي الطلبات", statsRevenue: "الإيرادات المتوقعة", statsNewRequests: "طلبات جديدة", refAnalytics: "تحليلات الإحالة والمدفوعات", refBalance: "رصيد", refInvited: "دعا", refRequests: "طلبات", refConversion: "تحويل", refRevenue: "إيرادات", refPaid: "مدفوع", refPayoutBtn: "دفع", refOrders: "طلبات", refInvitedUsers: "المدعوون", refHistory: "سجل المدفوعات", recentRequests: "الطلبات الأخيرة", refresh: "تحديث", noRequests: "لا توجد طلبات", statusContacted: "تم الاتصال", statusDone: "تم التنفيذ",
@@ -369,7 +384,10 @@ const translations: any = {
     addNewTransfer: "توصيلة جديدة",
     deleteConfirm: "هل أنت متأكد؟",
     linkCopied: "تم النسخ!",
-    withdrawBtn: "سحب المكافآت", manageManagers: "إدارة المديرين", assignEmployee: "+ إضافة", enterTgId: "معرف تليجرام", activeEmployees: "الموظفون النشطون", managerAddError: "لم يتم العثور عليه.", managerAddSuccess: "أصبح المعرف {id} مديراً.", managerRemoveSuccess: "تم إزالة الموظف {id}.", managerAddFail: "خطأ.", analyzing: "جاري التحليل...", manageFaq: "إدارة الأسئلة", deleteFaqConfirm: "هل تريد الحذف؟", addFaq: "إضافة سؤال", newFaq: "سؤال جديد", editFaq: "تعديل", faqTopic: "الموضوع", faqContent: "المحتوى", saveBtn: "حفظ", cancelBtn: "إلغاء"
+    withdrawBtn: "سحب المكافآت", manageManagers: "إدارة المديرين", assignEmployee: "+ إضافة", enterTgId: "معرف تليجرام", activeEmployees: "الموظفون النشطون", managerAddError: "لم يتم العثور عليه.", managerAddSuccess: "أصبح المعرف {id} مديراً.", managerRemoveSuccess: "تم إزالة الموظف {id}.", managerAddFail: "خطأ.", analyzing: "جاري التحليل...", manageFaq: "إدارة الأسئلة", deleteFaqConfirm: "هل تريد الحذف؟", addFaq: "إضافة سؤال", newFaq: "سؤال جديد", editFaq: "تعديل", faqTopic: "الموضوع", faqContent: "المحتوى", saveBtn: "حفظ", cancelBtn: "إلغاء",
+    aboutVehicle: "حول السيارة",
+    bookingSubtitle: "اترك بيانات الاتصال الخاصة بك",
+    vehicleClass: "فئة السيارة"
   },
   fa: {
     adminTitle: "پنل مدیریت", adminSubtitle: "آمار کلی", tabReferral: "دعوت دوستان", tabStats: "داشبورد", tabExcursions: "تورها", tabRequests: "درخواست‌ها", tabFaq: "سوالات متداول", tabCatalog: "کاتالوگ", loading: "در حال بارگذاری...", bonusBalance: "موجودی شما", invitedCount: "دوستان دعوت شده", requestsCount: "درخواست‌های ثبت شده", inviteTitle: "لینک دعوت شما", promoLabel: "کد تخفیف", copyBtn: "کپی", getQrBtn: "دریافت QR", loginTitle: "ورود", loginDesc: "آیدی تلگرام خود را وارد کنید.", loginPlaceholder: "آیدی شما", loginBtn: "ورود", roleFounder: "مالک", roleManager: "مدیر", roleUser: "مشتری", ownerBadge: "بنیان‌گذار", statsTotalUsers: "کل مشتریان", statsTotalRequests: "کل درخواست‌ها", statsRevenue: "درآمد مورد انتظار", statsNewRequests: "درخواست‌های جدید", refAnalytics: "آنالیز دعوت‌ها و پرداخت‌ها", refBalance: "موجودی", refInvited: "دعوت شده", refRequests: "درخواست‌ها", refConversion: "تبدیل", refRevenue: "درآمد", refPaid: "پرداخت شده", refPayoutBtn: "پرداخت", refOrders: "سفارشات", refInvitedUsers: "دعوت‌شدگان", refHistory: "تاریخچه پرداخت", recentRequests: "آخرین درخواست‌ها", refresh: "بروزرسانی", noRequests: "درخواستی نیست", statusContacted: "تماس گرفته شد", statusDone: "انجام شد",
@@ -392,7 +410,10 @@ const translations: any = {
     addNewTransfer: "ترانسفر جدید",
     deleteConfirm: "آیا مطمئن هستید؟",
     linkCopied: "کپی شد!",
-    withdrawBtn: "برداشت پاداش", manageManagers: "مدیریت مدیران", assignEmployee: "+ افزودن", enterTgId: "آیدی تلگرام", activeEmployees: "کارکنان فعال", managerAddError: "پیدا نشد.", managerAddSuccess: "آیدی {id} مدیر شد.", managerRemoveSuccess: "حذف شد.", managerAddFail: "خطا.", analyzing: "در حال تحلیل...", manageFaq: "مدیریت سوالات", deleteFaqConfirm: "حذف شود؟", addFaq: "افزودن سوال", newFaq: "سوال جدید", editFaq: "ویرایش", faqTopic: "موضوع", faqContent: "محتوا", saveBtn: "ذخیره", cancelBtn: "لغو"
+    withdrawBtn: "برداشت پاداش", manageManagers: "مدیریت مدیران", assignEmployee: "+ افزودن", enterTgId: "آیدی تلگرام", activeEmployees: "کارکنان فعال", managerAddError: "پیدا نشد.", managerAddSuccess: "آیدی {id} مدیر شد.", managerRemoveSuccess: "حذف شد.", managerAddFail: "خطا.", analyzing: "در حال تحلیل...", manageFaq: "مدیریت سوالات", deleteFaqConfirm: "حذف شود؟", addFaq: "افزودن سوال", newFaq: "سوال جدید", editFaq: "ویرایش", faqTopic: "موضوع", faqContent: "محتوا", saveBtn: "ذخیره", cancelBtn: "لغو",
+    aboutVehicle: "درباره خودرو",
+    bookingSubtitle: "اطلاعات تماس خود را بگذارید",
+    vehicleClass: "کلاس خودرو"
   }
 };
 
