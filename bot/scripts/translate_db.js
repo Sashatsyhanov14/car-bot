@@ -24,12 +24,13 @@ async function translateCars() {
             });
 
             if (Object.keys(translations).length > 0) {
+                console.log('  Keys to update:', Object.keys(translations).join(', '));
                 const { error: updErr } = await supabase.from('cars').update(translations).eq('id', car.id);
                 if (updErr) console.error(`  Error updating car ${car.id}:`, updErr.message);
                 else console.log(`  Successfully translated car ${car.id}.`);
             }
         } else {
-            console.log(`Skipping car ${car.id} - already translated.`);
+            console.log(`Skipping car ${car.id} - translations already exist.`);
         }
     }
 }
@@ -55,12 +56,13 @@ async function translateTransfers() {
             });
 
             if (Object.keys(translations).length > 0) {
+                console.log('  Keys to update:', Object.keys(translations).join(', '));
                 const { error: updErr } = await supabase.from('transfers').update(translations).eq('id', tr.id);
                 if (updErr) console.error(`  Error updating transfer ${tr.id}:`, updErr.message);
                 else console.log(`  Successfully translated transfer ${tr.id}.`);
             }
         } else {
-            console.log(`Skipping transfer ${tr.id} - already translated.`);
+            console.log(`Skipping transfer ${tr.id} - translations already exist.`);
         }
     }
 }

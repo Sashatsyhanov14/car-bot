@@ -169,6 +169,20 @@ export default function AdminCars() {
                     <input type="number" placeholder="Price / Day" value={formData.price_per_day} onChange={e => setFormData({...formData, price_per_day: parseInt(e.target.value)})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
                 </div>
 
+                <div className="grid grid-cols-3 gap-3">
+                    <input placeholder="Body Style (SUV, Sedan...)" value={formData.body_style} onChange={e => setFormData({...formData, body_style: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
+                    <select value={formData.transmission} onChange={e => setFormData({...formData, transmission: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm text-slate-400">
+                        <option value="Automatic">Automatic</option>
+                        <option value="Manual">Manual</option>
+                    </select>
+                    <select value={formData.fuel_type} onChange={e => setFormData({...formData, fuel_type: e.target.value})} className="bg-black/20 border border-white/5 p-3 rounded-xl text-sm text-slate-400">
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Electric">Electric</option>
+                        <option value="Hybrid">Hybrid</option>
+                    </select>
+                </div>
+
                 <textarea placeholder="Description" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/5 p-3 rounded-xl text-sm" />
 
                 {/* Photo Preview Gallery */}
